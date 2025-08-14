@@ -10,7 +10,6 @@ export async function loader() {
 export async function filterAdjustments(companyId, filter) {
   try {
     const { data } = await axios.post(`/adjustment/adjustments/filter/${companyId}`, filter);
-
     return data.data;
   } catch (error) {
     console.error('Failed to filter adjustments:', error);
@@ -102,3 +101,12 @@ export async function deleteAdjustment(adjustmentId) {
 
   return data;
 }
+
+export const updateInventoryAdjustmentStatus = async (header_id, status) => {
+  const { data } = await axios.patch('/adjustment/status', {
+    header_id,
+    status
+  });
+
+  return data;
+};

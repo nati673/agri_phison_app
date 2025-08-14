@@ -26,7 +26,10 @@ import {
   WalletMinus,
   DollarCircle,
   Card,
-  TruckTime
+  TruckTime,
+  Warning2,
+  Setting5,
+  Danger
 } from 'iconsax-react';
 
 // type
@@ -54,7 +57,10 @@ const icons = {
   sales: DollarCircle,
   credit: Card,
   purchase: ShoppingBag,
-  order: TruckTime
+  order: TruckTime,
+  warning: Danger,
+  adj: Setting5
+  // items: Box1
 };
 
 // ==============================|| MENU ITEMS - APPLICATIONS ||============================== //
@@ -114,14 +120,6 @@ const applications = {
       breadcrumbs: false
     },
     {
-      id: 'purchase',
-      title: <FormattedMessage id="purchase" />,
-      type: 'item',
-      url: '/workspace/purchase/list',
-      icon: icons.purchase,
-      breadcrumbs: false
-    },
-    {
       id: 'product-center',
       title: <FormattedMessage id="product-center" />,
       type: 'collapse',
@@ -130,46 +128,79 @@ const applications = {
         {
           id: 'products',
           title: <FormattedMessage id="products" />,
+          type: 'item',
+          icon: icons.box1,
+          url: '/workspace/product-center/products',
+          actions: [
+            {
+              type: NavActionType.LINK,
+              label: 'Add Product',
+
+              icon: icons.add,
+              url: '/workspace/product-center/add-new-product'
+            }
+          ]
+        },
+
+        {
+          id: 'adjustments',
+          title: <FormattedMessage id="adjustments" />,
+          type: 'item',
+          icon: icons.adj,
+          url: '/workspace/product-center/adjustments',
+          actions: [
+            {
+              type: NavActionType.LINK,
+              label: 'Add Product',
+              icon: icons.add,
+              url: '/workspace/product-center/add-adjustment'
+            }
+          ]
+        },
+        {
+          id: 'stock-issues',
+          title: <FormattedMessage id="stock-issues" />,
           type: 'collapse',
-          icon: icons.shop,
+          icon: icons.warning,
           children: [
             {
-              id: 'products',
-              title: <FormattedMessage id="products" />,
+              id: 'expire-products',
+              title: <FormattedMessage id="expire-products" />,
               type: 'item',
-              url: '/workspace/product-center/products'
+              url: '/workspace/product-center/expires'
             },
             {
-              id: 'product-details',
-              title: <FormattedMessage id="product-details" />,
+              id: 'overstocks',
+              title: <FormattedMessage id="overstocks" />,
               type: 'item',
-              link: '/workspace/product-center/product-details/:id',
-              url: '/workspace/product-center/product-details/1',
-              breadcrumbs: false
+              url: '/workspace/product-center/overstocks'
             },
             {
-              id: 'product-list',
-              title: <FormattedMessage id="product-list" />,
+              id: 'low-stocks',
+              title: <FormattedMessage id="low-stocks" />,
               type: 'item',
-              url: '/workspace/product-center/product-list',
-              breadcrumbs: false
-            },
-            {
-              id: 'add-new-product',
-              title: <FormattedMessage id="add-new-product" />,
-              type: 'item',
-              url: '/workspace/product-center/add-new-product'
-            },
-            {
-              id: 'checkout',
-              title: <FormattedMessage id="checkout" />,
-              type: 'item',
-              url: '/workspace/product-center/checkout'
+              url: '/workspace/product-center/low-stocks'
             }
           ]
         }
       ]
     },
+    {
+      id: 'purchase',
+      title: <FormattedMessage id="purchase" />,
+      type: 'item',
+      url: '/workspace/purchase/list',
+      icon: icons.purchase,
+      actions: [
+        {
+          type: NavActionType.LINK,
+          label: 'Full Calendar',
+          icon: icons.add,
+          url: '/workspace/purchase/add-new-purchase'
+        }
+      ]
+    },
+
     {
       id: 'barcodes',
       title: <FormattedMessage id="barcodes" />,

@@ -50,7 +50,7 @@ export const renderLocationOption = (props, option, state) => {
         px: 1,
         py: 1,
         borderRadius: 2,
-        bgcolor: selected ? 'success.50' : isInactive ? 'action.disabledBackground' : '#fff',
+        bgcolor: selected ? 'success.50' : isInactive ? 'action.disabledBackground' : '',
         border: selected ? `2px solid ${theme.palette.success.main}` : '1px solid #f3f3f3',
         gap: 1.25,
         opacity: isInactive ? 0.6 : 1,

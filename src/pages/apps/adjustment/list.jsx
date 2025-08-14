@@ -1,27 +1,50 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useLoaderData, useNavigate } from 'react-router-dom';
+import { useLoaderData } from 'react-router-dom';
 import { alpha, styled, useTheme } from '@mui/material/styles';
-import Grid from '@mui/material/Grid';
-import FloatingCart from 'components/cards/e-commerce/FloatingCart';
-import ProductFilterDrawer from 'sections/apps/product-center/products/ProductFilterDrawer';
-import ProductsHeader from 'sections/apps/product-center/products/ProductsHeader';
-import useConfig from 'hooks/useConfig';
+import {
+  Box,
+  Grid,
+  Tabs,
+  Tab,
+  Chip,
+  Divider,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableContainer,
+  Tooltip,
+  Typography,
+  TextField,
+  InputAdornment,
+  Autocomplete
+} from '@mui/material';
+
+import MainCard from 'components/MainCard';
+import ScrollX from 'components/ScrollX';
+import IconButton from 'components/@extended/IconButton';
+import { HeaderSort, IndeterminateCheckbox, RowSelection, TablePagination } from 'components/third-party/react-table';
+import { ArrowDown2, ArrowUp2, Edit, SearchNormal1, Setting2, Trash } from 'iconsax-react';
+
+import AdjustmentView from 'sections/apps/adjustment/AdjustmentView';
+import AlertAdjustmentDelete from 'sections/apps/adjustment/AlertAdjustmentDelete';
+import AdjustmentModal from 'sections/apps/adjustment/AdjustmentModal';
+import AdjustmentOverview from 'sections/apps/adjustment/AdjustmentOverview';
+import EmptyInventoryAdjustments from 'sections/apps/adjustment/EmptyInventoryAdjustments';
+import AdjustmentStatusModal from 'sections/apps/adjustment/AdjustmentStatusModal';
+
 import { resetCart, useGetCart } from 'api/cart';
 import { filterAdjustments } from 'api/adjustment';
+import { useGetBusinessUnit } from 'api/business_unit';
+import { useGetLocation } from 'api/location';
+import useConfig from 'hooks/useConfig';
 import useAuth from 'hooks/useAuth';
-import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
-import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import Button from '@mui/material/Button';
-import TableCell from '@mui/material/TableCell';
-import TableBody from '@mui/material/TableBody';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import TableContainer from '@mui/material/TableContainer';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
+import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
+import WiderPopper from 'components/inputs/WiderPopper';
+import { renderLocationOption } from 'components/inputs/renderLocationOption';
+
 import {
   flexRender,
   getCoreRowModel,
@@ -30,16 +53,8 @@ import {
   getFilteredRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import MainCard from 'components/MainCard';
-import ScrollX from 'components/ScrollX';
-import IconButton from 'components/@extended/IconButton';
-import EmptyReactTable from 'pages/tables/react-table/empty';
-import { HeaderSort, IndeterminateCheckbox, RowSelection, TablePagination } from 'components/third-party/react-table';
-import { Add, ArrowDown2, ArrowUp2, Edit, Setting2, ShoppingBag, Trash } from 'iconsax-react';
-import AlertProductDelete from 'sections/apps/purchase/AlertProductDelete';
-import ProductView from 'sections/apps/purchase/PurchaseView';
-import ProductModal from 'sections/apps/purchase/ProductModal';
 
+// Responsive Main container
 const Main = styled('main', {
   shouldForwardProp: (prop) => prop !== 'open' && prop !== 'container'
 })(({ theme, open, container }) => ({
@@ -57,6 +72,10 @@ const Main = styled('main', {
     paddingLeft: 0,
     marginLeft: 0
   },
+  [theme.breakpoints.down('sm')]: {
+    paddingLeft: theme.spacing(1),
+    paddingRight: theme.spacing(1)
+  },
   ...(open && {
     transition: theme.transitions.create('margin', {
       easing: theme.transitions.easing.easeOut,
@@ -66,22 +85,31 @@ const Main = styled('main', {
   })
 }));
 
-function ReactTable({ data, columns }) {
+function ReactTable({
+  data,
+  columns,
+  activeTab,
+  setActiveTab,
+  globalFilter,
+  setGlobalFilter,
+  filter,
+  setFilter,
+  BusinessUnits,
+  locations,
+  locationOptions
+}) {
   const theme = useTheme();
   const [sorting, setSorting] = useState([{ id: 'location_name', desc: false }]);
-  const [columnFilters, setColumnFilters] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState('');
 
   const table = useReactTable({
     data,
     columns,
-    state: { columnFilters, sorting, rowSelection, globalFilter },
+    state: { sorting, rowSelection, globalFilter },
     enableRowSelection: true,
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
-    onColumnFiltersChange: setColumnFilters,
     getRowCanExpand: () => true,
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -89,28 +117,129 @@ function ReactTable({ data, columns }) {
     getPaginationRowModel: getPaginationRowModel()
   });
 
+  const groups = ['All', ...new Set(data.map((item) => item.adjustment_status))];
+  const counts = data.reduce((acc, val) => {
+    acc[val.adjustment_status] = (acc[val.adjustment_status] || 0) + 1;
+    return acc;
+  }, {});
   const backColor = alpha(theme.palette.primary.lighter, 0.1);
 
   return (
-    <MainCard
-      content={false}
-      sx={{
-        borderRadius: 3,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-        border: `1px solid ${theme.palette.grey[100]}`,
-        overflow: 'hidden'
-      }}
-    >
+    <MainCard content={false}>
+      {/* Tabs - now scrollable for mobile */}
+      <Box sx={{ p: { xs: 1, sm: 2.5 }, pb: 0 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, val) => setActiveTab(val)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          {groups.map((status, index) => (
+            <Tab
+              key={index}
+              label={status}
+              value={status}
+              icon={
+                <Chip
+                  label={status === 'All' ? data.length : counts[status]}
+                  color={status === 'All' ? 'primary' : status === 'approved' ? 'success' : status === 'submitted' ? 'warning' : 'error'}
+                  variant="light"
+                  size="small"
+                />
+              }
+              iconPosition="end"
+            />
+          ))}
+        </Tabs>
+      </Box>
+
+      {/* Search + Filters - adjusted spacing for small screens */}
+      <Grid container spacing={{ xs: 1, sm: 1.5 }} alignItems="center" p={{ xs: 1, sm: 2 }}>
+        {/* Search */}
+        <Grid item xs={12} sm={6} md={3}>
+          <TextField
+            placeholder="Search adjustments..."
+            value={globalFilter ?? ''}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchNormal1 size={18} color={theme.palette.text.secondary} />
+                </InputAdornment>
+              )
+            }}
+          />
+        </Grid>
+
+        {/* Business Unit */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Autocomplete
+            size="small"
+            options={BusinessUnits || []}
+            getOptionLabel={(o) => o.unit_name || ''}
+            value={(BusinessUnits || []).find((b) => b.business_unit_id === filter.business_unit_id) || null}
+            renderOption={renderBusinessUnitOption}
+            onChange={(_, v) =>
+              setFilter((prev) => ({
+                ...prev,
+                business_unit_id: v?.business_unit_id || '',
+                location_id: ''
+              }))
+            }
+            renderInput={(params) => <TextField {...params} placeholder="Select business unit" fullWidth />}
+            PopperComponent={WiderPopper}
+          />
+        </Grid>
+
+        {/* Location */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Autocomplete
+            size="small"
+            options={locationOptions}
+            getOptionLabel={(opt) => `${opt.location_name || ''} (${opt.location_type || ''})`}
+            value={(locations || []).find((l) => l.location_id === filter.location_id) || null}
+            onChange={(_, v) => setFilter((prev) => ({ ...prev, location_id: v?.location_id || '' }))}
+            renderOption={renderLocationOption}
+            renderInput={(params) => <TextField {...params} placeholder="Select location" fullWidth />}
+            PopperComponent={WiderPopper}
+          />
+        </Grid>
+
+        {/* Status */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Autocomplete
+            size="small"
+            options={[
+              { label: 'All', value: '' },
+              { label: 'Approved', value: 'approved' },
+              { label: 'Submitted', value: 'submitted' },
+              { label: 'Rejected', value: 'rejected' }
+            ]}
+            getOptionLabel={(opt) => opt.label}
+            value={
+              [
+                { label: 'All', value: '' },
+                { label: 'Approved', value: 'approved' },
+                { label: 'Submitted', value: 'submitted' },
+                { label: 'Rejected', value: 'rejected' }
+              ].find((s) => s.value === filter.adjustment_status) || null
+            }
+            onChange={(_, v) => setFilter((prev) => ({ ...prev, adjustment_status: v?.value || '' }))}
+            renderInput={(params) => <TextField {...params} placeholder="Select status" fullWidth />}
+          />
+        </Grid>
+      </Grid>
+
+      {/* Table */}
       <ScrollX>
         <Stack>
           <RowSelection selected={Object.keys(rowSelection).length} />
-          <TableContainer
-            sx={{
-              borderRadius: 3,
-              backgroundColor: theme.palette.background.paper
-            }}
-          >
-            <Table>
+          <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+            <Table size="small">
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -145,7 +274,7 @@ function ReactTable({ data, columns }) {
                     {row.getIsExpanded() && (
                       <TableRow sx={{ '&:hover': { bgcolor: `${backColor} !important` } }}>
                         <TableCell colSpan={row.getVisibleCells().length}>
-                          <ProductView data={row.original} />
+                          <AdjustmentView data={row.original} />
                         </TableCell>
                       </TableRow>
                     )}
@@ -176,52 +305,51 @@ export default function InventoryAdjustmentListPage() {
   const { cart } = useGetCart();
   const { user } = useAuth();
   const { container } = useConfig();
-  const navigate = useNavigate();
 
-  const [isLoading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);
-  const [isProductModalOpen, setProductModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [ProductDeleteId, setProductDeleteId] = useState('');
-  const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
-
-  const initialProducts = useLoaderData();
-  const [products, setProducts] = useState(initialProducts);
-
-  const initialState = {
-    search: '',
-    sort: 'low',
-    location_id: ['all'],
-    category_id: ['all'],
-    business_unit_id: ['all'],
-    product_unit: ['all'],
-    price: '',
-    rating: 0
-  };
-  const [filter, setFilter] = useState(initialState);
+  const [isAdjustmentModalOpen, setAdjustmentModalOpen] = useState(false);
+  const [selectedAdjustment, setSelectedAdjustment] = useState(null);
+  const [AdjustmentDeleteId, setAdjustmentDeleteId] = useState('');
   const [actionDone, setActionDone] = useState(false);
+  const [isStatusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedStatusAdjustment, setSelectedStatusAdjustment] = useState(null);
 
-  const handleDrawerOpen = () => setOpenFilterDrawer((prev) => !prev);
-  const handleCloseDelete = () => setOpenDelete(!openDelete);
-  const handleAddProduct = () => navigate('/workspace/purchase/add-new-purchase');
+  const initialAdjustments = useLoaderData();
+  const [adjustments, setAdjustments] = useState(initialAdjustments);
 
-  useEffect(() => {
-    setLoading(false);
-  }, []);
+  const [filter, setFilter] = useState({
+    business_unit_id: '',
+    location_id: '',
+    adjustment_status: ''
+  });
+  const [activeTab, setActiveTab] = useState('All');
+  const [globalFilter, setGlobalFilter] = useState('');
+
+  const { BusinessUnits } = useGetBusinessUnit();
+  const { locations } = useGetLocation();
+
+  const locationOptions = useMemo(() => {
+    if (filter.business_unit_id) {
+      const bu = BusinessUnits?.find((b) => b.business_unit_id === filter.business_unit_id);
+      return (bu?.locations || []).filter((loc) => loc.location_type !== 'branch');
+    }
+    return (locations || []).filter((loc) => loc.location_type !== 'branch');
+  }, [BusinessUnits, locations, filter.business_unit_id]);
 
   useEffect(() => {
     if (cart && cart.step > 2) resetCart();
   }, [cart]);
 
-  const filterData = async () => {
-    const response = await filterAdjustments(user?.company_id, filter);
-    setProducts(response);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    filterData();
-  }, [actionDone, user, filter]);
+    (async () => {
+      const sendFilters = { ...filter };
+      if (activeTab !== 'All' && !sendFilters.adjustment_status) {
+        sendFilters.adjustment_status = activeTab;
+      }
+      const response = await filterAdjustments(user?.company_id, sendFilters);
+      setAdjustments(response);
+    })();
+  }, [actionDone, user, filter, activeTab]);
 
   const columns = useMemo(
     () => [
@@ -243,15 +371,10 @@ export default function InventoryAdjustmentListPage() {
           />
         )
       },
-      {
-        header: 'ID',
-        accessorKey: 'header_id',
-        meta: { className: 'cell-center' }
-      },
-
+      { header: 'ID', accessorKey: 'header_id', meta: { className: 'cell-center' } },
       {
         header: 'Item Name',
-        accessorKey: 'product_name',
+        accessorKey: 'adjusted_by_name',
         cell: ({ row, getValue }) => {
           const date = new Date(row.original.adjustment_date).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -265,9 +388,7 @@ export default function InventoryAdjustmentListPage() {
                 <Typography variant="body1" fontWeight={600}>
                   {getValue()}
                 </Typography>
-                <Typography>
-                  {row.original.adjusted_by_name} • {date}
-                </Typography>
+                <Typography>{date}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {row.original.business_unit_name} | {row.original.location_name}
                 </Typography>
@@ -276,7 +397,6 @@ export default function InventoryAdjustmentListPage() {
           );
         }
       },
-
       {
         header: 'Type',
         accessorKey: 'adjustment_type',
@@ -291,34 +411,23 @@ export default function InventoryAdjustmentListPage() {
           <Chip
             variant="outlined"
             label={getValue()}
-            color={getValue() === 'approved' ? 'success' : getValue() === 'pending' ? 'warning' : 'error'}
+            color={getValue() === 'approved' ? 'success' : getValue() === 'submitted' ? 'warning' : 'error'}
             size="small"
           />
         )
       },
-
       {
         header: 'Adjustment Date',
         accessorKey: 'adjustment_date',
-        cell: ({ getValue }) =>
-          new Date(getValue()).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          })
+        cell: ({ getValue }) => new Date(getValue()).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
       },
-
       {
         header: 'Actions',
         meta: { className: 'cell-center' },
         cell: ({ row }) => (
-          <Stack direction="row" spacing={1} justifyContent="center">
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="center" alignItems="center">
             <Tooltip title="View More">
-              <IconButton
-                onClick={() => {
-                  row.toggleExpanded();
-                }}
-              >
+              <IconButton onClick={() => row.toggleExpanded()}>
                 {row.getCanExpand() && row.getIsExpanded() ? <ArrowUp2 /> : <ArrowDown2 />}
               </IconButton>
             </Tooltip>
@@ -327,11 +436,23 @@ export default function InventoryAdjustmentListPage() {
                 color="primary"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedProduct(row.original);
-                  setProductModalOpen(true);
+                  setSelectedAdjustment(row.original);
+                  setAdjustmentModalOpen(true);
                 }}
               >
                 <Edit />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Update Status">
+              <IconButton
+                color="warning"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedStatusAdjustment(row.original);
+                  setStatusModalOpen(true);
+                }}
+              >
+                <Setting2 />
               </IconButton>
             </Tooltip>
             <Tooltip title="Delete">
@@ -339,8 +460,8 @@ export default function InventoryAdjustmentListPage() {
                 color="error"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCloseDelete();
-                  setProductDeleteId(row.original.header_id);
+                  setOpenDelete(true);
+                  setAdjustmentDeleteId(row.original.header_id);
                 }}
               >
                 <Trash />
@@ -353,88 +474,51 @@ export default function InventoryAdjustmentListPage() {
     [theme]
   );
 
-  let productResult;
-  if (products && products.length > 0) {
-    productResult = (
-      <Grid item xs={12}>
-        <ReactTable data={products} columns={columns} />
-
-        <AlertProductDelete
-          id={Number(ProductDeleteId)}
-          company_id={user?.company_id}
-          title={ProductDeleteId}
-          open={openDelete}
-          handleClose={handleCloseDelete}
-          actionDone={setActionDone}
-        />
-
-        <ProductModal
-          open={isProductModalOpen}
-          actionDone={setActionDone}
-          modalToggler={setProductModalOpen}
-          purchase={selectedProduct}
-          filters={filter}
-        />
-      </Grid>
-    );
-  } else {
-    productResult = (
-      <Grid item xs={12} sx={{ mt: 3 }}>
-        <Box
-          sx={{
-            textAlign: 'center',
-            py: 6,
-            border: `1px dashed ${theme.palette.grey[300]}`,
-            borderRadius: 3
-          }}
-        >
-          <ShoppingBag size="48" color={theme.palette.primary.main} variant="Bulk" />
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            No purchases found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Start by adding a new purchase to manage your records.
-          </Typography>
-          <Button onClick={handleAddProduct} variant="contained" startIcon={<Add />} sx={{ mt: 3 }}>
-            Add Purchase
-          </Button>
-        </Box>
-      </Grid>
-    );
-  }
-
   return (
     <Box sx={{ display: 'flex' }}>
-      <ProductFilterDrawer
-        filter={filter}
-        setFilter={setFilter}
-        openFilterDrawer={openFilterDrawer}
-        handleDrawerOpen={handleDrawerOpen}
-        setLoading={setLoading}
-        initialState={initialState}
-      />
+      <Main theme={theme} open={false} container={container}>
+        <AdjustmentOverview adjustments={adjustments} />
+        {adjustments && adjustments.length > 0 ? (
+          <ReactTable
+            data={adjustments}
+            columns={columns}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            globalFilter={globalFilter}
+            setGlobalFilter={setGlobalFilter}
+            filter={filter}
+            setFilter={setFilter}
+            BusinessUnits={BusinessUnits}
+            locations={locations}
+            locationOptions={locationOptions}
+          />
+        ) : (
+          <EmptyInventoryAdjustments />
+        )}
 
-      <Main theme={theme} open={openFilterDrawer} container={container}>
-        <Grid container spacing={2.5}>
-          <Grid item xs={12}>
-            <ProductsHeader
-              filter={filter}
-              handleDrawerOpen={handleDrawerOpen}
-              setFilter={setFilter}
-              addTitle={'Add New Purchase'}
-              handleAdd={handleAddProduct}
-              SerachLable={'Search Purchase'}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
-              {productResult}
-            </Grid>
-          </Grid>
-        </Grid>
+        {/* Modals */}
+        <AlertAdjustmentDelete
+          id={Number(AdjustmentDeleteId)}
+          company_id={user?.company_id}
+          title={AdjustmentDeleteId}
+          open={openDelete}
+          handleClose={() => setOpenDelete(false)}
+          actionDone={setActionDone}
+        />
+        <AdjustmentStatusModal
+          open={isStatusModalOpen}
+          handleClose={() => setStatusModalOpen(false)}
+          adjustment={selectedStatusAdjustment}
+          actionDone={setActionDone}
+        />
+        <AdjustmentModal
+          open={isAdjustmentModalOpen}
+          actionDone={setActionDone}
+          modalToggler={setAdjustmentModalOpen}
+          adjustment={selectedAdjustment}
+          filters={filter}
+        />
       </Main>
-
-      {/* <FloatingCart /> */}
     </Box>
   );
 }

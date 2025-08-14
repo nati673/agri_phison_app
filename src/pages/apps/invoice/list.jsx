@@ -249,9 +249,71 @@ function ReactTable({ data, columns }) {
 // ==============================|| INVOICE - LIST ||============================== //
 
 export default function List() {
-  const { invoiceLoading, invoice: list } = useGetInvoice();
+  const { invoiceLoading} = useGetInvoice();
   const { invoiceMaster } = useGetInvoiceMaster();
   const [invoiceId, setInvoiceId] = useState(0);
+const list = [
+  {
+    id: 101,
+    customer_name: 'John Doe',
+    email: 'john.doe@example.com',
+    date: '2025-08-01',
+    due_date: '2025-08-15',
+    quantity: 5,
+    status: 'Paid',
+    avatar: 3
+  },
+  {
+    id: 102,
+    customer_name: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    date: '2025-07-28',
+    due_date: '2025-08-10',
+    quantity: 2,
+    status: 'Unpaid',
+    avatar: 5
+  },
+  {
+    id: 103,
+    customer_name: 'Chris Johnson',
+    email: 'chris.johnson@example.com',
+    date: '2025-07-20',
+    due_date: '2025-08-01',
+    quantity: 8,
+    status: 'Cancelled',
+    avatar: 2
+  },
+  {
+    id: 104,
+    customer_name: 'Emily Davis',
+    email: 'emily.davis@example.com',
+    date: '2025-08-02',
+    due_date: '2025-08-18',
+    quantity: 10,
+    status: 'Paid',
+    avatar: 4
+  },
+  {
+    id: 105,
+    customer_name: 'Michael Brown',
+    email: 'michael.brown@example.com',
+    date: '2025-08-05',
+    due_date: '2025-08-20',
+    quantity: 3,
+    status: 'Unpaid',
+    avatar: 6
+  },
+  {
+    id: 106,
+    customer_name: 'Sarah Wilson',
+    email: 'sarah.wilson@example.com',
+    date: '2025-07-25',
+    due_date: '2025-08-05',
+    quantity: 4,
+    status: 'Cancelled',
+    avatar: 1
+  }
+];
 
   const navigation = useNavigate();
   const handleClose = (status) => {
@@ -497,7 +559,7 @@ export default function List() {
           </Box>
         </Grid>
         <Grid item xs={12}>
-          {invoiceLoading ? <EmptyReactTable /> : <ReactTable {...{ data: list, columns }} />}
+          {invoiceLoading ? <EmptyReactTable columns={columns} /> : <ReactTable {...{ data: list, columns }} />}
           <AlertProductDelete
             title={invoiceId.toString()}
             open={invoiceMaster ? invoiceMaster.alertPopup : false}

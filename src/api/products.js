@@ -40,6 +40,81 @@ export function useGetProducts() {
   return memoizedValue;
 }
 
+export function useGetSmallQuantityProducts() {
+  const { user } = useAuth();
+  const companyId = user?.company_id;
+
+  const { data, isLoading, error, isValidating } = useSWR(companyId ? `/products/small-stock/${companyId}` : null, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
+
+  const memoizedValue = useMemo(
+    () => ({
+      smallQtyProducts: data?.data || [],
+      smallQtyLoading: isLoading,
+      smallQtyError: error,
+      smallQtyValidating: isValidating,
+      smallQtyEmpty: !isLoading && !(data?.data && data.data.length)
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+export function useGetOverStockedProducts() {
+  const { user } = useAuth();
+  const companyId = user?.company_id;
+
+  const { data, isLoading, error, isValidating } = useSWR(companyId ? `/products/overstocked/${companyId}` : null, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
+
+  const memoizedValue = useMemo(
+    () => ({
+      overstockedProducts: data?.data || [],
+      overstockedLoading: isLoading,
+      overstockedError: error,
+      overstockedValidating: isValidating,
+      overstockedEmpty: !isLoading && !(data?.data && data.data.length)
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+export function useGetExpiredProducts({ horizon = '3m', include = 'expired,soon_expire' } = {}) {
+  const { user } = useAuth();
+  const companyId = user?.company_id;
+
+  const { data, isLoading, error, isValidating } = useSWR(
+    companyId ? `/products/expired/${companyId}?horizon=${encodeURIComponent(horizon)}&include=${encodeURIComponent(include)}` : null,
+    fetcher,
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false
+    }
+  );
+
+  const memoized = useMemo(
+    () => ({
+      expiredProducts: data?.data || [],
+      expiredLoading: isLoading,
+      expiredError: error,
+      expiredValidating: isValidating,
+      expiredEmpty: !isLoading && !(data?.data && data.data.length)
+    }),
+    [data, isLoading, error, isValidating]
+  );
+
+  return memoized;
+}
+
 export function useGetProductSuggestions({ search = '' }) {
   const { user } = useAuth();
   const companyId = user?.company_id;

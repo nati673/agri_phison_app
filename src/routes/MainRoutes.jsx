@@ -26,6 +26,9 @@ import PurchaseListPage from 'pages/apps/purchase/list';
 import AddNewPurchase from 'pages/apps/purchase/add-new-purchase';
 import AddInventoryAdjustment from 'pages/apps/adjustment/add-inventory-adjustment';
 import InventoryAdjustmentListPage from 'pages/apps/adjustment/list';
+import MaxStockProducts from 'pages/apps/product-center/max-stock-products';
+import LowStockProducts from 'pages/apps/product-center/min-stock-products';
+import ExpiredProducts from 'pages/apps/product-center/expired-products';
 
 // render - dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
@@ -254,14 +257,6 @@ const MainRoutes = {
               element: <SalesForm />
             },
 
-            {
-              path: 'adjustments',
-              element: <InventoryAdjustmentListPage />
-            },
-            {
-              path: 'add-adjustment',
-              element: <AddInventoryAdjustment />
-            },
             // {
             //   path: 'customer',
 
@@ -404,6 +399,26 @@ const MainRoutes = {
                 {
                   path: 'add-new-product',
                   element: <AppECommAddProduct />
+                },
+                {
+                  path: 'adjustments',
+                  element: <InventoryAdjustmentListPage />
+                },
+                {
+                  path: 'add-adjustment',
+                  element: <AddInventoryAdjustment />
+                },
+                {
+                  path: 'overstocks',
+                  element: <MaxStockProducts />
+                },
+                {
+                  path: 'low-stocks',
+                  element: <LowStockProducts />
+                },
+                {
+                  path: 'expires',
+                  element: <ExpiredProducts />
                 },
                 {
                   path: 'checkout',

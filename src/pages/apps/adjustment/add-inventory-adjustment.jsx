@@ -62,7 +62,7 @@ const reasonCodes = [
 const inputStyle = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '10px',
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     transition: 'all 0.2s ease-in-out'
   },
   '& .MuiInputLabel-root': {
