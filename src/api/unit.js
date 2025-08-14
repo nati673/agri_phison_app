@@ -1,0 +1,61 @@
+import { useState } from 'react';
+
+export function useGetUnits() {
+  const units = [
+    { value: 'KG', label: 'Kilogram' },
+    { value: 'GM', label: 'Gram' },
+    { value: 'MG', label: 'Milligram' },
+    { value: 'QTL', label: 'Quintal' },
+    { value: 'MT', label: 'Metric Ton' },
+    { value: 'LIT', label: 'Liter' },
+    { value: 'ML', label: 'Milliliter' },
+    { value: 'GAL', label: 'Gallon' },
+    { value: 'J', label: 'Jerrican' },
+    { value: 'CAN', label: 'Can' },
+    { value: 'BKT', label: 'Bucket' },
+    { value: 'DR', label: 'Drum' },
+    { value: 'M', label: 'Meter' },
+    { value: 'CM', label: 'Centimeter' },
+    { value: 'MM', label: 'Millimeter' },
+    { value: 'HR', label: 'Hour' },
+    { value: 'MIN', label: 'Minute' },
+    { value: 'SEC', label: 'Second' },
+    { value: 'PC', label: 'Piece' },
+    { value: 'NUM', label: 'Number' },
+    { value: 'PK', label: 'Pack' },
+    { value: 'BOX', label: 'Box' },
+    { value: 'CRT', label: 'Carton' },
+    { value: 'SET', label: 'Set' },
+    { value: 'PAIR', label: 'Pair' },
+    { value: 'BTL', label: 'Bottle' },
+    { value: 'SACH', label: 'Sachet' },
+    { value: 'VIAL', label: 'Vial' },
+    { value: 'AMP', label: 'Ampoule' },
+    { value: 'SYR', label: 'Syringe' },
+    { value: 'DRL', label: 'Dropper Bottle' },
+    { value: 'INH', label: 'Inhaler' },
+    { value: 'TB', label: 'Tablet' },
+    { value: 'CAP', label: 'Capsule' },
+    { value: 'BOL', label: 'Bolus' },
+    { value: 'OINT', label: 'Ointment' },
+    { value: 'PDR', label: 'Powder' },
+    { value: 'LIQ', label: 'Liquid' },
+    { value: 'GRN', label: 'Granule' },
+    { value: 'SPR', label: 'Spray' },
+    { value: 'DUST', label: 'Dust' },
+    { value: 'SOL', label: 'Solution' },
+    { value: 'EMUL', label: 'Emulsion' },
+    { value: 'FERT', label: 'Fertilizer' },
+    { value: 'CTG', label: 'Cotton Gauze' },
+    { value: 'DOZ', label: 'Dozen' },
+    { value: 'ROLL', label: 'Roll' },
+    { value: 'STRIP', label: 'Strip' },
+    { value: 'TUBE', label: 'Tube' },
+    { value: 'TRAY', label: 'Tray' },
+    { value: 'PAL', label: 'Pallet' }
+  ];
+
+  const unitsLoading = false;
+
+  return { units, unitsLoading };
+}
