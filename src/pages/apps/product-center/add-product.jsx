@@ -45,6 +45,7 @@ import GHS06 from '../../../assets/pictograms/GHS06.png';
 import GHS07 from '../../../assets/pictograms/GHS07.png';
 import GHS08 from '../../../assets/pictograms/GHS08.png';
 import GHS09 from '../../../assets/pictograms/GHS09.png';
+import { requiredInputStyle } from 'components/inputs/requiredInputStyle';
 
 const pictogramOptions = [
   { id: 'GHS01', label: 'Explosive', image: GHS01 },
@@ -82,24 +83,6 @@ const TooltipStyle = {
   }
 };
 
-const requiredInputStyle = {
-  '& .MuiOutlinedInput-root': {
-    position: 'relative',
-    paddingLeft: '8px',
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 1.8,
-      bottom: 1.8,
-      left: 1,
-      width: 4.8,
-      borderTopLeftRadius: 100,
-      borderBottomLeftRadius: 100,
-      backgroundColor: '#76CB2B'
-    }
-  },
-  '& .MuiInputBase-root': { height: 48 }
-};
 const inputStyle = {
   '& .MuiInputBase-root': {
     minHeight: 48,
@@ -253,6 +236,21 @@ export default function AddNewProductSectioned() {
                     }}
                     onChange={async (e, newValue) => {
                       // newValue can be a string (creatable) or product object (from suggestions)
+
+                      if (!newValue) {
+                        setProductAutoFilled(false);
+                        setFieldValue('product_name', '');
+                        setFieldValue('product_name_localized', '');
+                        setFieldValue('product_unit', '');
+                        setFieldValue('category_id', '');
+                        setFieldValue('sku', '');
+                        setFieldValue('product_volume', '');
+                        // setFieldValue('unit_price', '');
+                        // setFieldValue('purchase_price', '');
+                        // ...add any other fields you wish to clear
+                        return;
+                      }
+
                       let selected = null;
                       if (typeof newValue === 'string') {
                         // Try to match to a suggestion (optional, if you want to 'resolve' string values)

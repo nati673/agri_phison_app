@@ -18,7 +18,9 @@ export default function ReportCard({ primary, secondary, iconPrimary, color }) {
       <Grid container justifyContent="space-between" alignItems="center">
         <Grid item>
           <Stack spacing={0.25}>
-            <Typography variant="h3">{primary}</Typography>
+            <Typography color={color} variant="h3">
+              {primary}
+            </Typography>
             <Typography variant="body1" color="text.secondary">
               {secondary}
             </Typography>

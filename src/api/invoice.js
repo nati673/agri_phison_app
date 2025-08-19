@@ -23,14 +23,14 @@ const initialState = {
 export const endpoints = {
   key: 'api/invoice',
   actions: 'actions',
-  list: '/list', // server URL
+  list: '/invoices', // server URL
   insert: '/insert', // server URL
   update: '/update', // server URL
   delete: '/delete' // server URL
 };
 
 export function useGetInvoice() {
-  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, fetcher, {
+  const { data, isLoading, error, isValidating } = useSWR(endpoints.list, fetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false
@@ -38,7 +38,7 @@ export function useGetInvoice() {
 
   const memoizedValue = useMemo(
     () => ({
-      invoice: data?.invoice,
+      invoice: data?.data || [],
       invoiceLoading: isLoading,
       invoiceError: error,
       invoiceValidating: isValidating,

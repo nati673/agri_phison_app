@@ -16,3 +16,33 @@ export async function AddNewSales(formattedPayload) {
     throw error;
   }
 }
+
+export async function filterSales(companyId, filter) {
+  try {
+    const { data } = await axios.post(`/sales/filter/${companyId}`, filter);
+    return data.data;
+  } catch (error) {
+    console.error('Failed to filter sales:', error);
+    return [];
+  }
+}
+
+export async function updateSales(sale_id, formattedPayload) {
+  const { data } = await axios.put(`/sales/${sale_id}`, formattedPayload);
+
+  return data;
+}
+export async function deleteSales(adjustmentId) {
+  const { data } = await axios.delete(`/sales/${adjustmentId}`);
+
+  return data;
+}
+
+export const updateSalesStatus = async (sale_id, status) => {
+  const { data } = await axios.patch('/sales/status', {
+    sale_id,
+    status
+  });
+
+  return data;
+};

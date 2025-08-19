@@ -2,10 +2,6 @@ import React, { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLoaderData } from 'react-router-dom';
 import {
   Box,
-  Grid,
-  Tabs,
-  Tab,
-  Chip,
   Divider,
   Stack,
   Table,
@@ -16,34 +12,31 @@ import {
   TableContainer,
   Tooltip,
   Typography,
-  TextField,
-  InputAdornment,
-  Autocomplete,
-  Collapse
+  Chip
 } from '@mui/material';
-import { alpha, styled, useTheme } from '@mui/material/styles';
+import { styled, useTheme, alpha } from '@mui/material/styles';
+import { format, formatDistanceToNow } from 'date-fns';
 
+// Components
 import MainCard from 'components/MainCard';
 import ScrollX from 'components/ScrollX';
 import IconButton from 'components/@extended/IconButton';
 import { HeaderSort, IndeterminateCheckbox, RowSelection, TablePagination } from 'components/third-party/react-table';
-import { ArrowDown2, ArrowUp2, Edit, Filter, ProfileCircle, SearchNormal1, Setting2, Trash } from 'iconsax-react';
+import { ArrowDown2, ArrowUp2, Edit, Filter, MoneyAdd, ProfileCircle, SearchNormal1, Setting2, Trash } from 'iconsax-react';
 
-import SalesView from 'sections/apps/sales/SalesView';
-import SalesOverview from 'sections/apps/sales/SalesOverview';
-import SalesModal from 'sections/apps/sales/SalesModal';
-import AlertSalesDelete from 'sections/apps/sales/AlertSalesDelete';
-import SalesStatusModal from 'sections/apps/sales/SalesStatusModal';
-import EmptySales from 'sections/apps/sales/EmptySales';
-
-import { filterSales } from 'api/sales';
+import TableFilters from 'components/TableFilters';
+import useAuth from 'hooks/useAuth';
+import useConfig from 'hooks/useConfig';
 import { useGetBusinessUnit } from 'api/business_unit';
 import { useGetLocation } from 'api/location';
-import useConfig from 'hooks/useConfig';
-import useAuth from 'hooks/useAuth';
-import WiderPopper from 'components/inputs/WiderPopper';
-import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
-import { renderLocationOption } from 'components/inputs/renderLocationOption';
+
+import { filterCredit } from 'api/credit';
+import EmptySales from 'sections/apps/sales/EmptySales'; // reuse existing empty state
+// import CreditsOverview from 'sections/apps/credits/CreditsOverview'; // you will implement like SalesOverview
+import CreditsView from 'sections/apps/credit/CreditsView'; // detail expanded row
+// import CreditsModal from 'sections/apps/credits/CreditsModal'; // for editing/updating
+// import AlertCreditDelete from 'sections/apps/credits/AlertCreditDelete';
+// import CreditStatusModal from 'sections/apps/credits/CreditStatusModal';
 
 import {
   flexRender,
@@ -53,11 +46,9 @@ import {
   getFilteredRowModel,
   useReactTable
 } from '@tanstack/react-table';
-import { Button } from '@mui/base';
-import SalesFilters from 'sections/apps/sales/SalesFilters';
-import TableFilters from 'components/TableFilters';
-import { format, formatDistanceToNow } from 'date-fns';
+import CreditPaymentModal from 'sections/apps/credit/CreditPaymentModal';
 
+// ------- helpers
 function safeArray(arr) {
   return Array.isArray(arr) ? arr : [];
 }
@@ -81,7 +72,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && pr
 function ReactTable({ data, columns }) {
   const theme = useTheme();
   const safeData = safeArray(data);
-  const [sorting, setSorting] = useState([{ id: 'sale_date', desc: true }]);
+  const [sorting, setSorting] = useState([{ id: 'added_date', desc: true }]);
   const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
@@ -135,7 +126,7 @@ function ReactTable({ data, columns }) {
                   {row.getIsExpanded() && (
                     <TableRow sx={{ '&:hover': { bgcolor: `${backColor} !important` } }}>
                       <TableCell colSpan={row.getVisibleCells().length}>
-                        <SalesView data={row.original} />
+                        <CreditsView data={row.original} />
                       </TableCell>
                     </TableRow>
                   )}
@@ -161,19 +152,22 @@ function ReactTable({ data, columns }) {
 }
 
 // ------------------- PAGE -------------------
-export default function SalesListPage() {
+export default function CreditsListPage() {
   const theme = useTheme();
   const { user } = useAuth();
   const { container } = useConfig();
-  const initialSales = useLoaderData();
-  const [sales, setSales] = useState(safeArray(initialSales));
+  const initialCredits = useLoaderData();
+  const [credits, setCredits] = useState(safeArray(initialCredits));
+
   const [openDelete, setOpenDelete] = useState(false);
-  const [isSalesModalOpen, setSalesModalOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState(null);
-  const [SaleDeleteId, setSaleDeleteId] = useState('');
+  const [isCreditModalOpen, setCreditModalOpen] = useState(false);
+  const [selectedCredit, setSelectedCredit] = useState(null);
+  const [creditDeleteId, setCreditDeleteId] = useState('');
   const [isStatusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedStatusSale, setSelectedStatusSale] = useState(null);
+  const [selectedStatusCredit, setSelectedStatusCredit] = useState(null);
   const [actionDone, setActionDone] = useState(false);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [creditToPay, setCreditToPay] = useState(null);
 
   const [filter, setFilter] = useState({
     business_unit_id: '',
@@ -189,64 +183,35 @@ export default function SalesListPage() {
   const { BusinessUnits } = useGetBusinessUnit();
   const { locations } = useGetLocation();
 
-  const safeBusinessUnits = safeArray(BusinessUnits);
-  const safeLocations = safeArray(locations);
-
-  const locationOptions = useMemo(() => {
-    if (filter.business_unit_id) {
-      const bu = safeBusinessUnits.find((b) => b.business_unit_id === filter.business_unit_id);
-      return safeArray(bu?.locations).filter((loc) => loc.location_type !== 'branch');
-    }
-    return safeLocations.filter((loc) => loc.location_type !== 'branch');
-  }, [safeBusinessUnits, safeLocations, filter.business_unit_id]);
-
   useEffect(() => {
     (async () => {
       const sendFilters = { ...filter };
       if (activeTab !== 'All' && !sendFilters.status) sendFilters.status = activeTab;
       try {
-        const response = await filterSales(user?.company_id, sendFilters);
-        setSales(safeArray(response));
+        const response = await filterCredit(user?.company_id, sendFilters);
+        setCredits(safeArray(response));
       } catch {
-        setSales([]);
+        setCredits([]);
       }
     })();
   }, [actionDone, user, filter, activeTab]);
 
+  // -------- TABLE COLUMNS --------
   const columns = useMemo(
     () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <IndeterminateCheckbox
-            checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-          />
-        ),
-        cell: ({ row }) => (
-          <IndeterminateCheckbox
-            checked={row.getIsSelected()}
-            disabled={!row.getCanSelect()}
-            indeterminate={row.getIsSomeSelected()}
-            onChange={row.getToggleSelectedHandler()}
-          />
-        )
-      },
-      { header: 'ID', accessorKey: 'sale_id', meta: { className: 'cell-center' } },
+      { header: 'ID', accessorKey: 'credit_id', meta: { className: 'cell-center' } },
       {
         header: 'Customer',
         accessorKey: 'customer_name',
         cell: ({ row, getValue }) => {
+          const addedDate = new Date(row.original.added_date);
+          const relativeDate = formatDistanceToNow(addedDate, { addSuffix: true });
+          const exactDate = format(addedDate, 'PPpp');
           const [showExactDate, setShowExactDate] = useState(false);
-          const saleDate = new Date(row.original.sale_date);
-
-          const relativeDate = formatDistanceToNow(saleDate, { addSuffix: true });
-          const exactDate = format(saleDate, 'PPpp');
 
           return (
             <Stack direction="row" spacing={1.5}>
-              <ProfileCircle size="55" color={theme.palette.primary.main} variant="Bulk" />
+              <ProfileCircle size="45" color={theme.palette.primary.main} variant="Bulk" />
               <Stack spacing={0}>
                 <Typography fontWeight={600}>{getValue()}</Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -265,9 +230,19 @@ export default function SalesListPage() {
         }
       },
       {
-        header: 'Total Amount',
-        accessorKey: 'total_amount',
+        header: 'Total Credit',
+        accessorKey: 'credit_total',
         cell: ({ getValue }) => <Typography fontWeight={600}>Birr {getValue()}</Typography>
+      },
+      {
+        header: 'Paid',
+        accessorKey: 'total_paid',
+        cell: ({ getValue }) => <Typography>{getValue()}</Typography>
+      },
+      {
+        header: 'Remaining',
+        accessorKey: 'remaining_balance',
+        cell: ({ getValue }) => <Typography color="error.main">{getValue()}</Typography>
       },
       {
         header: 'Status',
@@ -275,18 +250,14 @@ export default function SalesListPage() {
         cell: ({ getValue }) => (
           <Chip
             variant="outlined"
-            label={getValue()}
+            // label={}
+            label={getValue().charAt(0).toUpperCase() + getValue().slice(1)}
             color={
               getValue() === 'paid' ? 'success' : getValue() === 'unpaid' ? 'error' : getValue() === 'partially paid' ? 'warning' : 'info'
             }
             size="small"
           />
         )
-      },
-      {
-        header: 'Type',
-        accessorKey: 'sale_type',
-        cell: ({ getValue }) => <Chip variant="filled" label={getValue().toUpperCase()} color={'info'} size="small" />
       },
       {
         header: 'Actions',
@@ -301,32 +272,33 @@ export default function SalesListPage() {
                 color="primary"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedSale(row.original);
-                  setSalesModalOpen(true);
+                  setSelectedCredit(row.original);
+                  setCreditModalOpen(true);
                 }}
               >
                 <Edit />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Update Status">
+            <Tooltip title="Add Payment">
               <IconButton
                 color="warning"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedStatusSale(row.original);
-                  setStatusModalOpen(true);
+                  setCreditToPay(row.original);
+                  setPaymentModalOpen(true);
                 }}
               >
-                <Setting2 />
+                <MoneyAdd />
               </IconButton>
             </Tooltip>
+
             <Tooltip title="Delete">
               <IconButton
                 color="error"
                 onClick={(e) => {
                   e.stopPropagation();
                   setOpenDelete(true);
-                  setSaleDeleteId(row.original.sale_id);
+                  setCreditDeleteId(row.original.credit_id);
                 }}
               >
                 <Trash />
@@ -338,13 +310,14 @@ export default function SalesListPage() {
     ],
     [theme]
   );
+  console.log(credits);
   return (
     <Box>
       <Main theme={theme} open={false} container={container}>
-        <SalesOverview sales={sales} />
+        {/* <CreditsOverview credits={credits} /> */}
         <MainCard content={false}>
           <TableFilters
-            data={sales}
+            data={credits}
             filter={filter}
             setFilter={setFilter}
             globalFilter={globalFilter}
@@ -352,32 +325,38 @@ export default function SalesListPage() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
           />
-
           <Divider />
-          {sales.length > 0 ? <ReactTable data={sales} columns={columns} /> : <EmptySales />}
+          {credits.length > 0 ? <ReactTable data={credits} columns={columns} /> : <EmptySales />}
         </MainCard>
 
         {/* Modals */}
-        <AlertSalesDelete
-          id={Number(SaleDeleteId)}
+        {/* <AlertCreditDelete
+          id={Number(creditDeleteId)}
           company_id={user?.company_id}
-          title={SaleDeleteId}
+          title={creditDeleteId}
           open={openDelete}
           handleClose={() => setOpenDelete(false)}
           actionDone={setActionDone}
         />
-        <SalesStatusModal
+        <CreditStatusModal
           open={isStatusModalOpen}
           handleClose={() => setStatusModalOpen(false)}
-          sale={selectedStatusSale}
+          credit={selectedStatusCredit}
           actionDone={setActionDone}
         />
-        <SalesModal
-          open={isSalesModalOpen}
+        
+        <CreditsModal
+          open={isCreditModalOpen}
           actionDone={setActionDone}
-          modalToggler={setSalesModalOpen}
-          sale={selectedSale}
+          modalToggler={setCreditModalOpen}
+          credit={selectedCredit}
           filters={filter}
+        /> */}
+        <CreditPaymentModal
+          open={isPaymentModalOpen}
+          handleClose={() => setPaymentModalOpen(false)}
+          credit={creditToPay || {}}
+          onPaymentSuccess={() => setActionDone((ad) => !ad)}
         />
       </Main>
     </Box>

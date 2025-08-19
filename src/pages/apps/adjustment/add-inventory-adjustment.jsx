@@ -13,7 +13,7 @@ import {
   FormControlLabel,
   Radio
 } from '@mui/material';
-import { Add, Trash } from 'iconsax-react';
+import { Add, AddCircle, PenRemove, Trash } from 'iconsax-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -30,6 +30,7 @@ import { addInventoryAdjustment } from 'api/adjustment';
 import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
 import { renderLocationOption } from 'components/inputs/renderLocationOption';
 import ProductSelector from 'sections/apps/product-center/products/ProductSelector';
+import { requiredInputStyle } from 'components/inputs/requiredInputStyle';
 
 const initialLine = {
   product: null,
@@ -95,12 +96,33 @@ export default function AddInventoryAdjustment() {
   const { locations } = useGetLocation();
   const { user } = useAuth();
   const { setScanHandlerActive } = useTool();
+  const newValueRefs = useRef([]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === '/') {
+        // Focus the first available input
+        if (newValueRefs.current && newValueRefs.current.length > 0) {
+          for (let i = 0; i < newValueRefs.current.length; i++) {
+            if (newValueRefs.current[i]) {
+              newValueRefs.current[i].focus();
+              break;
+            }
+          }
+        }
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const [headerInfo, setHeaderInfo] = useState({
     business_unit: null,
     location: null,
     adjustment_type: 'quantity',
-    reason_code: 'other',
+    reason_code: '',
     adjustment_date: new Date(),
     notes: ''
   });
@@ -155,19 +177,67 @@ export default function AddInventoryAdjustment() {
     setLines((prev) => [...prev, ...Array(count).fill({ ...initialLine })]);
     setBulkAddCount('');
   };
+  function playErrorBeep() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(200, ctx.currentTime); // 600Hz beep
+    oscillator.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.4);
+  }
 
   useBarcodeScanner((scanned) => {
-    const foundProduct = products.find(
-      (p) => p.sku?.toUpperCase() === scanned.trim().toUpperCase() || p.barcode?.toUpperCase() === scanned.trim().toUpperCase()
-    );
+    const code = scanned.trim().toUpperCase();
+    const foundProduct = products.find((p) => p.sku?.toUpperCase() === code || p.barcode?.toUpperCase() === code);
     if (!foundProduct) return toast.error('Product not found');
+
+    // Check if product already in lines
     setLines((prev) => {
-      if (prev.length === 1 && !prev[0].product) {
-        let updated = [...prev];
-        updated[0].product = foundProduct;
-        return updated;
+      const current = Array.isArray(prev) ? prev : [{ ...initialLine }];
+      const alreadyScanned = current.some((line) => line.product?.product_id === foundProduct.product_id);
+
+      if (alreadyScanned) {
+        playErrorBeep();
+        toast.error('Product already scanned');
+        return current;
       }
-      return [...prev, { ...initialLine, product: foundProduct }];
+
+      // First scan: replace initial empty line, otherwise push new line
+      if (current.length === 1 && !current[0].product) {
+        toast.success(`Product added: ${foundProduct.name || foundProduct.sku || foundProduct.product_id}`);
+        return [
+          {
+            ...current,
+            product: foundProduct,
+            previous_quantity: foundProduct.quantity || 0,
+            previous_unit_price: foundProduct.unit_price || 0
+          }
+        ];
+      }
+
+      toast.success(`Product added: ${foundProduct.name || foundProduct.sku || foundProduct.product_id}`);
+
+      return [
+        ...current,
+        {
+          ...initialLine,
+          product: foundProduct,
+          previous_quantity: foundProduct.quantity || 0,
+          previous_unit_price: foundProduct.unit_price || 0
+        }
+      ];
+    });
+
+    setHeaderInfo((prev) => {
+      let updated = { ...prev };
+      if (!prev.business_unit && foundProduct.business_unit_id) {
+        updated.business_unit = BusinessUnits.find((bu) => bu.business_unit_id === foundProduct.business_unit_id);
+      }
+      if (!prev.location && foundProduct.location_id) {
+        updated.location = locations.find((loc) => loc.location_id === foundProduct.location_id);
+      }
+      return updated;
     });
   });
 
@@ -222,7 +292,7 @@ export default function AddInventoryAdjustment() {
           business_unit: null,
           location: null,
           adjustment_type: 'quantity',
-          reason_code: 'other',
+          reason_code: '',
           adjustment_date: new Date(),
           notes: ''
         });
@@ -231,11 +301,14 @@ export default function AddInventoryAdjustment() {
       if (Array.isArray(err.errors) && err.errors.length > 0) {
         err.errors.forEach((msg) => toast.error(msg));
       } else {
-        toast.error(err.message || 'Error submitting purchase');
+        toast.error(err.message);
       }
     } finally {
       setLoading(false);
     }
+  };
+  const handleClearLine = (idx) => {
+    setLines((prev) => prev.map((line, i) => (i === idx ? { ...initialLine } : line)));
   };
 
   return (
@@ -251,19 +324,8 @@ export default function AddInventoryAdjustment() {
             onChange={(e, v) => handleHeaderChange('business_unit', v)}
             renderOption={(props, option, params) => renderBusinessUnitOption(props, option, params)}
             isOptionEqualToValue={(o, v) => o.business_unit_id === v.business_unit_id}
-            renderInput={(p) => (
-              <TextField
-                {...p}
-                size="small"
-                required
-                sx={{
-                  ...inputStyle,
-                  '& .MuiInputBase-root': {
-                    height: 40 // change height here
-                  }
-                }}
-              />
-            )}
+            renderInput={(p) => <TextField {...p} size="small" required />}
+            sx={requiredInputStyle}
           />
         </ResponsiveHeaderRow>
 
@@ -276,19 +338,8 @@ export default function AddInventoryAdjustment() {
             onChange={(e, v) => handleHeaderChange('location', v)}
             renderOption={(props, option, params) => renderLocationOption(props, option, params)}
             isOptionEqualToValue={(o, v) => o.location_id === v.location_id}
-            renderInput={(p) => (
-              <TextField
-                {...p}
-                size="small"
-                required
-                sx={{
-                  ...inputStyle,
-                  '& .MuiInputBase-root': {
-                    height: 40
-                  }
-                }}
-              />
-            )}
+            renderInput={(p) => <TextField {...p} size="small" required />}
+            sx={requiredInputStyle}
             disabled={!headerInfo.business_unit}
           />
         </ResponsiveHeaderRow>
@@ -313,18 +364,8 @@ export default function AddInventoryAdjustment() {
             getOptionLabel={(o) => o.label || ''}
             value={reasonCodes.find((rc) => rc.value === headerInfo.reason_code) || null}
             onChange={(e, v) => handleHeaderChange('reason_code', v ? v.value : '')}
-            renderInput={(p) => (
-              <TextField
-                {...p}
-                size="small"
-                sx={{
-                  ...inputStyle,
-                  '& .MuiInputBase-root': {
-                    height: 40
-                  }
-                }}
-              />
-            )}
+            renderInput={(p) => <TextField {...p} size="small" />}
+            sx={requiredInputStyle}
           />
         </ResponsiveHeaderRow>
 
@@ -399,6 +440,7 @@ export default function AddInventoryAdjustment() {
                     selectedProductIds={selectedIds}
                     value={line.product}
                     onChange={(v) => handleLineChange(idx, 'product', v)}
+                    disabled={!headerInfo.business_unit || !headerInfo.location}
                   />
                 </Grid>
 
@@ -424,6 +466,7 @@ export default function AddInventoryAdjustment() {
                         onChange={(e) => handleLineChange(idx, 'new_quantity', e.target.value)}
                         size="small"
                         sx={inputStyle}
+                        inputRef={(el) => (newValueRefs.current[idx] = el)}
                       />
                     </Grid>
                     <Grid item xs={6} sm={2}>
@@ -460,15 +503,21 @@ export default function AddInventoryAdjustment() {
                         onChange={(e) => handleLineChange(idx, 'new_unit_price', e.target.value)}
                         size="small"
                         sx={inputStyle}
+                        inputRef={(el) => (newValueRefs.current[idx] = el)}
                       />
                     </Grid>
                   </>
                 )}
 
-                {/* Remove Button */}
                 <Grid item xs={12} sm="auto">
                   <IconButton color="error" onClick={() => handleRemoveLine(idx)} disabled={lines.length === 1}>
                     <Trash />
+                  </IconButton>
+                  <IconButton color="warning" onClick={() => handleClearLine(idx)} size="small" aria-label="Clear Row" sx={{ ml: 1 }}>
+                    <PenRemove />
+                  </IconButton>
+                  <IconButton color="default" onClick={handleAddLine} size="small" aria-label="Clear Row" sx={{ ml: 1 }}>
+                    <AddCircle />
                   </IconButton>
                 </Grid>
               </Grid>

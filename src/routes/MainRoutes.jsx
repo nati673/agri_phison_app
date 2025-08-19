@@ -29,6 +29,13 @@ import InventoryAdjustmentListPage from 'pages/apps/adjustment/list';
 import MaxStockProducts from 'pages/apps/product-center/max-stock-products';
 import LowStockProducts from 'pages/apps/product-center/min-stock-products';
 import ExpiredProducts from 'pages/apps/product-center/expired-products';
+import AddOrderPage from 'pages/apps/order/add-new-order';
+import OrderListPage from 'pages/apps/order/list';
+import SalesListPage from 'pages/apps/sales/list';
+import CreditsListPage from 'pages/apps/credit/list';
+import AddExpenseForm from 'pages/apps/expense/add-expense';
+import ExpenseCardPage from 'pages/apps/expense/list';
+// import CompanyWeb from 'pages/web/CompanyWeb';
 
 // render - dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
@@ -253,9 +260,41 @@ const MainRoutes = {
               element: <ProductBarcodes />
             },
             {
-              path: 'add-sales',
-              element: <SalesForm />
+              path: 'credit',
+              element: <CreditsListPage />
             },
+
+            {
+              path: 'expense',
+              children: [
+                {
+                  path: 'add-expense',
+                  element: <AddExpenseForm />
+                },
+                {
+                  path: 'list',
+                  element: <ExpenseCardPage />
+                }
+              ]
+            },
+            {
+              path: 'sales',
+              children: [
+                {
+                  path: 'add-sales',
+                  element: <SalesForm />
+                },
+                {
+                  path: 'list',
+                  element: <SalesListPage />
+                }
+              ]
+            },
+
+            // {
+            //   path: 'web',
+            //   element: <CompanyWeb />
+            // },
 
             // {
             //   path: 'customer',
@@ -293,6 +332,21 @@ const MainRoutes = {
                 }
               ]
             },
+
+            {
+              path: 'order',
+              children: [
+                {
+                  path: 'list',
+                  element: <OrderListPage />
+                },
+                {
+                  path: 'add-new-order',
+                  element: <AddOrderPage />
+                }
+              ]
+            },
+
             {
               path: 'invoice',
               children: [
@@ -629,7 +683,7 @@ const MainRoutes = {
     },
     {
       path: '/',
-      // element: <SimpleLayout layout={SimpleLayoutType.SIMPLE} />,
+      element: <SimpleLayout layout={SimpleLayoutType.SIMPLE} />,
       children: [
         {
           path: 'contact-us',

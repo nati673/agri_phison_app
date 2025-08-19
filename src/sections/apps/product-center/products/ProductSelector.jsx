@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Autocomplete, TextField } from '@mui/material';
 import { renderProductOption } from 'components/inputs/renderProductOption';
+import WiderPopper from 'components/inputs/WiderPopper';
 
 export default function ProductSelector({
   products = [],
@@ -35,6 +36,7 @@ export default function ProductSelector({
       renderInput={(params) => <TextField {...params} label="Product" size="small" required />}
       isOptionEqualToValue={(o, v) => o.product_id === v.product_id}
       disabled={disabled}
+      PopperComponent={WiderPopper}
     />
   );
 }

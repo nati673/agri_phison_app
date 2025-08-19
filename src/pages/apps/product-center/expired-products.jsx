@@ -275,14 +275,20 @@ export default function ExpiredProductsPage() {
                   { label: '7 days', value: '7d' },
                   { label: '30 days', value: '30d' },
                   { label: '3 months', value: '3m' },
-                  { label: '6 months', value: '6m' }
+                  { label: '6 months', value: '6m' },
+                  { label: '1 year', value: '1y' },
+                  { label: '2 years', value: '2y' },
+                  { label: '5 years', value: '5y' },
                 ]}
                 getOptionLabel={(o) => o.label}
                 value={[
                   { label: '7 days', value: '7d' },
                   { label: '30 days', value: '30d' },
                   { label: '3 months', value: '3m' },
-                  { label: '6 months', value: '6m' }
+                  { label: '6 months', value: '6m' },
+                  { label: '1 year', value: '1y' },
+                  { label: '2 years', value: '2y' },
+                  { label: '5 years', value: '5y' }
                 ].find((o) => o.value === horizon)}
                 onChange={(_, v) => setHorizon(v?.value ?? '3m')}
                 renderInput={(params) => <TextField {...params} placeholder="Horizon" fullWidth />}

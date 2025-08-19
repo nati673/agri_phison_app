@@ -213,9 +213,17 @@ const applications = {
       id: 'expense',
       title: <FormattedMessage id="expense" />,
       type: 'item',
-      url: '/workspace/expense',
+      url: '/workspace/expense/list',
       icon: icons.expense,
-      breadcrumbs: false
+      breadcrumbs: false,
+      actions: [
+        {
+          type: NavActionType.LINK,
+          label: 'Full Calendar',
+          icon: icons.add,
+          url: '/workspace/expense/add-expense'
+        }
+      ]
     },
 
     {
@@ -246,14 +254,14 @@ const applications = {
           id: 'add-sales',
           title: <FormattedMessage id="add-sales" />,
           type: 'item',
-          url: '/workspace/add-sales',
+          url: '/workspace/sales/add-sales',
           breadcrumbs: false
         },
         {
           id: 'sales-list',
           title: <FormattedMessage id="sales-list" />,
           type: 'item',
-          url: '/workspace/sales-list',
+          url: '/workspace/sales/list',
           breadcrumbs: false
         }
       ]

@@ -20,6 +20,7 @@ import { renderLocationOption } from 'components/inputs/renderLocationOption';
 import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
 import useAuth from 'hooks/useAuth';
 import ProductSelector from 'sections/apps/product-center/products/ProductSelector';
+import { useNavigate } from 'react-router';
 
 // Row structure
 const initialEntry = {
@@ -45,6 +46,7 @@ function AddNewPurchase() {
     location: null,
     purchaseDate: new Date()
   });
+  const navigate = useNavigate();
 
   const { setScanHandlerActive } = useTool();
   const quantityRefs = useRef([]);
@@ -163,6 +165,7 @@ function AddNewPurchase() {
           purchaseDate: new Date()
         });
       }
+      navigate('/workspace/purchase/list');
     } catch (err) {
       if (Array.isArray(err.errors) && err.errors.length > 0) {
         err.errors.forEach((msg) => toast.error(msg));
