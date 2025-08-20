@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, Fragment } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Box,
@@ -17,7 +17,7 @@ import {
   LinearProgress,
   useMediaQuery
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import {
   flexRender,
   getCoreRowModel,
@@ -37,7 +37,7 @@ import EmptyReactTable from 'pages/tables/react-table/empty';
 import AlertProductDelete from 'sections/apps/invoice/AlertProductDelete';
 import { APP_DEFAULT_PATH } from 'config';
 import { openSnackbar } from 'api/snackbar';
-import { handlerDelete, deleteInvoice, useGetInvoice, useGetInvoiceMaster } from 'api/invoice';
+import { useGetInvoice } from 'api/invoice';
 import {
   CSVExport,
   DebouncedInput,
@@ -47,27 +47,15 @@ import {
   SelectColumnSorting,
   TablePagination
 } from 'components/third-party/react-table';
-import { DocumentText, Edit2, Eye, Trash } from 'iconsax-react';
+import { ArrowDown2, ArrowUp2, DocumentText, Edit2, Eye, Link1, Trash } from 'iconsax-react';
+import InvoiceDetailModern from 'sections/apps/invoice/InvoiceDetail';
+import InvoiceShareEditModal from 'sections/apps/invoice/InvoiceUpdate';
 
-// Fuzzy global filter for table
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value);
   addMeta(itemRank);
   return itemRank.passed;
 };
-
-function LinearWithLabel({ value, ...others }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Box sx={{ width: '100%', mr: 1 }}>
-        <LinearProgress color="warning" variant="determinate" value={value} {...others} />
-      </Box>
-      <Box sx={{ minWidth: 35 }}>
-        <Typography variant="body2" color="white">{`${Math.round(value)}%`}</Typography>
-      </Box>
-    </Box>
-  );
-}
 
 function DateCell({ value }) {
   const [showExact, setShowExact] = useState(false);
@@ -101,17 +89,13 @@ function StatusChip({ status }) {
 }
 
 function ReactTable({ data, columns }) {
-  const groups = useMemo(() => ['All', ...new Set(data.map((item) => item.status))], [data]);
-  const [activeTab, setActiveTab] = useState(groups[0]);
+  const theme = useTheme();
   const [sorting, setSorting] = useState([{ id: 'customer_name', desc: false }]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
 
-  useEffect(() => {
-    setColumnFilters(activeTab === 'All' ? [] : [{ id: 'status', value: activeTab }]);
-  }, [activeTab]);
-
+  // Key change: getRowCanExpand allows details expansion!
   const table = useReactTable({
     data,
     columns,
@@ -121,6 +105,7 @@ function ReactTable({ data, columns }) {
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
+    getRowCanExpand: () => true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -128,6 +113,8 @@ function ReactTable({ data, columns }) {
     globalFilterFn: fuzzyFilter,
     debugTable: false
   });
+
+  const backColor = alpha(theme.palette.primary.lighter, 0.15);
 
   const headers = useMemo(
     () =>
@@ -189,13 +176,23 @@ function ReactTable({ data, columns }) {
               </TableHead>
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} {...cell.column.columnDef.meta}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                  <Fragment key={row.id}>
+                    <TableRow>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} {...cell.column.columnDef.meta}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {/* Expanded details row */}
+                    {row.getIsExpanded() && (
+                      <TableRow sx={{ bgcolor: backColor }}>
+                        <TableCell colSpan={row.getVisibleCells().length} sx={{ p: 3 }}>
+                          <InvoiceDetailModern invoice={row.original} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 ))}
               </TableBody>
             </MuiTable>
@@ -218,26 +215,26 @@ function ReactTable({ data, columns }) {
 
 export default function InvoiceList() {
   const { invoiceLoading, invoice: list } = useGetInvoice();
-  const { invoiceMaster } = useGetInvoiceMaster();
   const [invoiceId, setInvoiceId] = useState(0);
   const navigation = useNavigate();
-
-  const handleClose = useCallback(
-    (status) => {
-      if (status) {
-        deleteInvoice(invoiceId);
-        openSnackbar({
-          open: true,
-          message: 'Column deleted successfully',
-          anchorOrigin: { vertical: 'top', horizontal: 'right' },
-          variant: 'alert',
-          alert: { color: 'success' }
-        });
-      }
-      handlerDelete(false);
-    },
-    [invoiceId]
-  );
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedShareRecord, setSelectedShareRecord] = useState(null);
+  // const handleClose = useCallback(
+  //   (status) => {
+  //     if (status) {
+  //       deleteInvoice(invoiceId);
+  //       openSnackbar({
+  //         open: true,
+  //         message: 'Column deleted successfully',
+  //         anchorOrigin: { vertical: 'top', horizontal: 'right' },
+  //         variant: 'alert',
+  //         alert: { color: 'success' }
+  //       });
+  //     }
+  //     handlerDelete(false);
+  //   },
+  //   [invoiceId]
+  // );
 
   const columns = useMemo(
     () => [
@@ -297,43 +294,52 @@ export default function InvoiceList() {
         meta: { className: 'cell-center' },
         cell: ({ row }) => (
           <Stack direction="row" alignItems="center" justifyContent="center" spacing={0}>
-            <Tooltip title="View">
-              <IconButton
-                color="secondary"
-                aria-label="View"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigation(`/apps/invoice/details/${row.original.id}`);
-                }}
-              >
-                <Eye />
+            {/* Only one Eye icon for expand/collapse */}
+            <Tooltip title={row.getIsExpanded() ? 'Collapse details' : 'View details'}>
+              <IconButton color="secondary" aria-label="ExpandRow" onClick={row.getToggleExpandedHandler()}>
+                {row.getIsExpanded() ? <ArrowUp2 /> : <ArrowDown2 />}
               </IconButton>
             </Tooltip>
-            <Tooltip title="Edit">
+            {/* Optional: You can add a new icon, e.g., DocumentText, for navigation */}
+            <Tooltip title="Open full invoice">
               <IconButton
-                color="primary"
-                aria-label="Edit"
+                color="secondary"
+                aria-label="OpenInvoice"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigation(`/apps/invoice/edit/${row.original.id}`);
+                  navigation(`/apps/invoice/details/${row.original.invoice_id}`);
+                }}
+              >
+                <Link1 />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Edit Share">
+              <IconButton
+                color="primary"
+                aria-label="EditShare"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedShareRecord(row.original); // or row.original.share if that's your share object
+                  setModalOpen(true);
                 }}
               >
                 <Edit2 />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete">
+
+            {/* <Tooltip title="Delete">
               <IconButton
                 color="error"
                 aria-label="Delete"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setInvoiceId(row.original.id);
+                  setInvoiceId(row.original.invoice_id);
                   handlerDelete(true);
                 }}
               >
                 <Trash />
               </IconButton>
-            </Tooltip>
+            </Tooltip> */}
           </Stack>
         )
       }
@@ -355,7 +361,9 @@ export default function InvoiceList() {
       <Grid container direction={matchDownSM ? 'column' : 'row'} spacing={2} sx={{ pb: 2 }}>
         <Grid item xs={12}>
           {invoiceLoading ? <EmptyReactTable columns={columns} /> : <ReactTable data={list ?? []} columns={columns} />}
-          <AlertProductDelete title={String(invoiceId)} open={!!invoiceMaster?.alertPopup} handleClose={handleClose} />
+          {/* <AlertProductDelete title={String(invoiceId)} open={!!invoiceMaster?.alertPopup} handleClose={handleClose} /> */}
+
+          <InvoiceShareEditModal open={modalOpen} onClose={() => setModalOpen(false)} share={selectedShareRecord} />
         </Grid>
       </Grid>
     </>

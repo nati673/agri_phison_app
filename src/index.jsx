@@ -8,6 +8,7 @@ import 'assets/fonts/inter/inter.css';
 
 // scroll bar
 import 'simplebar-react/dist/simplebar.min.css';
+import './assets/sass/style.scss';
 
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';

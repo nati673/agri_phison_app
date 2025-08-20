@@ -1,0 +1,300 @@
+@use './color_variable' as color;
+/*--------------------------------------------------------------
+2. Normalize (Scoped)
+----------------------------------------------------------------*/
+.tm_invoice *,
+.tm_invoice *::after,
+.tm_invoice *::before {
+  box-sizing: border-box;
+}
+
+.tm_invoice html {
+  line-height: 1.15;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Sections */
+.tm_invoice body {
+  margin: 0;
+}
+
+.tm_invoice main {
+  display: block;
+}
+
+.tm_invoice h1 {
+  font-size: 2em;
+  margin: 0.67em 0;
+}
+
+.tm_invoice hr {
+  box-sizing: content-box;
+  height: 0;
+  overflow: visible;
+}
+
+.tm_invoice pre {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+
+/* Text-level semantics */
+.tm_invoice a {
+  background-color: transparent;
+}
+
+.tm_invoice abbr[title] {
+  border-bottom: none;
+  text-decoration: underline;
+  text-decoration: underline dotted;
+}
+
+.tm_invoice b,
+.tm_invoice strong {
+  font-weight: bolder;
+}
+
+.tm_invoice code,
+.tm_invoice kbd,
+.tm_invoice samp {
+  font-family: monospace, monospace;
+  font-size: 1em;
+}
+
+.tm_invoice small {
+  font-size: 80%;
+}
+
+.tm_invoice sub,
+.tm_invoice sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.tm_invoice sub { bottom: -0.25em; }
+.tm_invoice sup { top: -0.5em; }
+
+/* Embedded content */
+.tm_invoice img { border-style: none; }
+
+/* Forms */
+.tm_invoice button,
+.tm_invoice input,
+.tm_invoice optgroup,
+.tm_invoice select,
+.tm_invoice textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.tm_invoice button,
+.tm_invoice input { overflow: visible; }
+
+.tm_invoice button,
+.tm_invoice select { text-transform: none; }
+
+.tm_invoice button,
+.tm_invoice [type='button'],
+.tm_invoice [type='reset'],
+.tm_invoice [type='submit'] {
+  -webkit-appearance: button;
+}
+
+.tm_invoice button::-moz-focus-inner,
+.tm_invoice [type='button']::-moz-focus-inner,
+.tm_invoice [type='reset']::-moz-focus-inner,
+.tm_invoice [type='submit']::-moz-focus-inner {
+  border-style: none;
+  padding: 0;
+}
+
+.tm_invoice button:-moz-focusring,
+.tm_invoice [type='button']:-moz-focusring,
+.tm_invoice [type='reset']:-moz-focusring,
+.tm_invoice [type='submit']:-moz-focusring {
+  outline: 1px dotted ButtonText;
+}
+
+.tm_invoice fieldset { padding: 0.35em 0.75em 0.625em; }
+
+.tm_invoice legend {
+  box-sizing: border-box;
+  color: inherit;
+  display: table;
+  max-width: 100%;
+  padding: 0;
+  white-space: normal;
+}
+
+.tm_invoice progress { vertical-align: baseline; }
+
+.tm_invoice textarea { overflow: auto; }
+
+.tm_invoice [type='checkbox'],
+.tm_invoice [type='radio'] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.tm_invoice [type='number']::-webkit-inner-spin-button,
+.tm_invoice [type='number']::-webkit-outer-spin-button {
+  height: auto;
+}
+
+.tm_invoice [type='search'] {
+  -webkit-appearance: textfield;
+  outline-offset: -2px;
+}
+
+.tm_invoice [type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.tm_invoice ::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+/* Interactive */
+.tm_invoice details { display: block; }
+.tm_invoice summary { display: list-item; }
+
+/* Misc */
+.tm_invoice template { display: none; }
+.tm_invoice [hidden] { display: none; }
+
+/*--------------------------------------------------------------
+2. Typography (Scoped)
+----------------------------------------------------------------*/
+
+/* Google Font Source */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap');
+
+.tm_invoice {
+  color: color.$secondary;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6em;
+  overflow-x: hidden;
+  background-color: #f5f6fa;
+}
+
+.tm_invoice h1,
+.tm_invoice h2,
+.tm_invoice h3,
+.tm_invoice h4,
+.tm_invoice h5,
+.tm_invoice h6 {
+  clear: both;
+  color: color.$primary;
+  padding: 0;
+  margin: 0 0 20px 0;
+  font-weight: 500;
+  line-height: 1.2em;
+}
+
+.tm_invoice h1 { font-size: 60px; }
+.tm_invoice h2 { font-size: 48px; }
+.tm_invoice h3 { font-size: 30px; }
+.tm_invoice h4 { font-size: 24px; }
+.tm_invoice h5 { font-size: 18px; }
+.tm_invoice h6 { font-size: 16px; }
+
+.tm_invoice p,
+.tm_invoice div {
+  margin-top: 0;
+  line-height: 1.5em;
+}
+
+.tm_invoice p { margin-bottom: 15px; }
+
+.tm_invoice ul {
+  margin: 0 0 25px 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.tm_invoice ol {
+  padding-left: 20px;
+  margin-bottom: 25px;
+}
+
+.tm_invoice dfn,
+.tm_invoice cite,
+.tm_invoice em,
+.tm_invoice i {
+  font-style: italic;
+}
+
+.tm_invoice blockquote {
+  margin: 0 15px;
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.6em;
+  margin: 0;
+}
+
+.tm_invoice address { margin: 0 0 15px; }
+
+.tm_invoice img {
+  border: 0;
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.tm_invoice a {
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.tm_invoice a:hover { color: color.$accent; }
+
+.tm_invoice button {
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.tm_invoice a:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.tm_invoice table {
+  width: 100%;
+  caption-side: bottom;
+  border-collapse: collapse;
+}
+.tm_invoice th { text-align: left; }
+.tm_invoice td,
+.tm_invoice th {
+  padding: 10px 15px;
+  line-height: 1.55em;
+}
+.tm_invoice td { border-top: 1px solid color.$border; }
+
+.tm_invoice dl {
+  margin-bottom: 25px;
+}
+.tm_invoice dt { font-weight: 600; }
+.tm_invoice b,
+.tm_invoice strong { font-weight: bold; }
+.tm_invoice pre {
+  color: color.$secondary;
+  border: 1px solid color.$border;
+  font-size: 18px;
+  padding: 25px;
+  border-radius: 5px;
+}
+.tm_invoice kbd {
+  font-size: 100%;
+  background-color: color.$secondary;
+  border-radius: 5px;
+}
+
+.tm_invoice ul { padding-left: 15px; }

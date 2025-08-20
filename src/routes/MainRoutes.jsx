@@ -35,6 +35,8 @@ import SalesListPage from 'pages/apps/sales/list';
 import CreditsListPage from 'pages/apps/credit/list';
 import AddExpenseForm from 'pages/apps/expense/add-expense';
 import ExpenseCardPage from 'pages/apps/expense/list';
+import StockTransferForm from 'pages/apps/transfer/add-transfer';
+import StockTransferListPage from 'pages/apps/transfer/list';
 // import CompanyWeb from 'pages/web/CompanyWeb';
 
 // render - dashboard
@@ -290,7 +292,19 @@ const MainRoutes = {
                 }
               ]
             },
-
+            {
+              path: 'transfers',
+              children: [
+                {
+                  path: 'add-new-transfer',
+                  element: <StockTransferForm />
+                },
+                {
+                  path: 'list',
+                  element: <StockTransferListPage />
+                }
+              ]
+            },
             // {
             //   path: 'web',
             //   element: <CompanyWeb />

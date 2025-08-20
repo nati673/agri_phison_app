@@ -29,7 +29,9 @@ import {
   TruckTime,
   Warning2,
   Setting5,
-  Danger
+  Danger,
+  Send2,
+  Cpu
 } from 'iconsax-react';
 
 // type
@@ -59,7 +61,9 @@ const icons = {
   purchase: ShoppingBag,
   order: TruckTime,
   warning: Danger,
-  adj: Setting5
+  adj: Setting5,
+  transfer: Send2,
+  ai: Cpu
   // items: Box1
 };
 
@@ -266,7 +270,37 @@ const applications = {
         }
       ]
     },
+    {
+      id: 'transfer',
+      title: <FormattedMessage id="transfer" />,
+      type: 'collapse',
+      icon: icons.transfer,
+      children: [
+        {
+          id: 'add-transfer',
+          title: <FormattedMessage id="add-transfer" />,
+          type: 'item',
+          url: '/workspace/transfers/add-new-transfer',
+          breadcrumbs: false
+        },
+        {
+          id: 'transfer-list',
+          title: <FormattedMessage id="transfer-list" />,
+          type: 'item',
+          url: '/workspace/transfers/list',
+          breadcrumbs: false
+        }
+      ]
+    },
 
+    {
+      id: 'ai',
+      title: <FormattedMessage id="ai" />,
+      type: 'item',
+      url: '/workspace/ai',
+      icon: icons.ai,
+      breadcrumbs: false
+    },
     {
       id: 'credit',
       title: <FormattedMessage id="credit" />,

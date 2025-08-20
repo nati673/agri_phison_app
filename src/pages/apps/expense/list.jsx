@@ -22,6 +22,7 @@ import usePagination from 'hooks/usePagination';
 import { useGetExpenses } from 'api/expense';
 
 import { Add, SearchNormal1 } from 'iconsax-react';
+import { useNavigate } from 'react-router';
 
 // Filter and sort options - customize as needed
 const sortFields = [
@@ -53,7 +54,7 @@ export default function ExpenseCardPage() {
   const [expCards, setExpCards] = useState([]);
   const [page, setPage] = useState(1);
   const [expenseModal, setExpenseModal] = useState(false);
-
+  const navigate = useNavigate();
   const PER_PAGE = 6;
   const count = Math.ceil(expCards.length / PER_PAGE);
   const _DATA = usePagination(expCards, PER_PAGE);
@@ -125,7 +126,7 @@ export default function ExpenseCardPage() {
                   ))}
                 </Select>
               </FormControl>
-              <Button variant="contained" onClick={() => setExpenseModal(true)} size="large" startIcon={<Add />}>
+              <Button variant="contained" onClick={() => navigate('/workspace/expense/add-expense')} size="large" startIcon={<Add />}>
                 Add Expense
               </Button>
             </Stack>

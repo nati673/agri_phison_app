@@ -17,7 +17,8 @@ export const endpoints = {
   delete_user: '/employee',
   update: '/employee',
   user_info: '/employee/profile',
-  update_profile: '/employee/profile'
+  update_profile: '/employee/profile',
+  user_filter: '/employee/filter'
 };
 
 export function useGetUsers() {
@@ -28,7 +29,7 @@ export function useGetUsers() {
     revalidateOnFocus: false,
     revalidateOnReconnect: false
   });
- 
+
   const memoizedValue = useMemo(
     () => ({
       users: data?.data || [],
@@ -64,6 +65,35 @@ export function useGetUserInfo() {
 
   return memoizedValue;
 }
+
+export function useGetUserByFilter(businessUnitId, locationId) {
+  const { user } = useAuth();
+  const companyID = user?.company_id;
+
+  const shouldFetch = companyID && businessUnitId && locationId;
+  const endpoint = shouldFetch
+    ? `${endpoints.user_filter}?company_id=${companyID}&business_unit_id=${businessUnitId}&location_id=${locationId}`
+    : null;
+
+  const { data, isLoading, error, isValidating } = useSWR(endpoint, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
+  const memoizedValue = useMemo(
+    () => ({
+      userInfo: data ?? null,
+      userInfoLoading: isLoading,
+      userInfoError: error,
+      userInfoValidating: isValidating,
+      userInfoEmpty: !isLoading && !data
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
 export async function createNewUser(company_id, newUserData) {
   mutate(
     `${endpoints.users}/${company_id}`,
@@ -112,7 +142,6 @@ export async function deleteUser(userData) {
 
   return res.data;
 }
-
 
 export async function updateUser(user_id, company_id, updatedData) {
   const companyUsersKey = `${endpoints.users}/${company_id}`;
@@ -167,7 +196,6 @@ export async function updateUserProfile(user_id, updatedData) {
 
   return res.data;
 }
-
 
 export function useGetUserMaster() {
   const { data, isLoading } = useSWR(endpoints.key + endpoints.modal, () => initialState, {

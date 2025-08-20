@@ -1,0 +1,36 @@
+@use './common/color_variable' as color;
+
+.tm_invoice table thead th:last-child,
+.tm_invoice table tbody td:last-child {
+  text-align: end;
+}
+
+.tm_invoice .tm_table_style_3 tbody tr:nth-child(odd),
+.tm_invoice .tm_table_style_2 tbody tr:nth-child(odd) {
+  background-color: color.$gray;
+}
+
+.tm_invoice .tm_table_style_2 thead th {
+  color: color.$accent;
+}
+
+.tm_invoice .tm_table_style_3 thead th {
+  color: color.$primary;
+}
+
+.tm_invoice .tm_table_style_4 tbody tr:nth-child(even) {
+  background-color: rgba(0, 122, 255, 0.1);
+}
+
+.tm_invoice .tm_accent_color,
+.tm_invoice .tm_accent_color_hover {
+  cursor: pointer;
+}
+.tm_invoice .tm_accent_color.active,
+.tm_invoice .tm_accent_color_hover.active {
+  color: color.$accent;
+}
+
+.tm_invoice .cs_cursor {
+  cursor: pointer;
+}
