@@ -44,27 +44,29 @@ export function useGetExpenses() {
 
 export async function createExpenses(newExpense) {
   const { company_id } = newExpense;
+  const cacheKey = `${endpoints.expenses}/${company_id}`;
 
-  // mutate(
-  //   `${endpoints.expenses}/${company_id}`,
-  //   (current) => {
-  //     if (!current) return;
-  //     const updated = {
-  //       ...current,
-  //       data: [...current.data, { ...newExpense, id: Date.now() }]
-  //     };
-  //     return updated;
-  //   },
-  //   false
-  // );
+  // Optimistic UI: Add expense to local cache instantly
+  mutate(
+    cacheKey,
+    (current) => {
+      if (!current) return;
+      return {
+        ...current,
+        data: [...current.data, { ...newExpense, id: Date.now(), pending: true }]
+      };
+    },
+    false // Do NOT revalidate yet
+  );
 
+  // Send to the server, get real result
   const { data } = await axios.post(endpoints.create_expense, newExpense);
 
-  // await mutate(`${endpoints.expenses}/${company_id}`);
+  // Final revalidate: sync with real data from the backend
+  await mutate(cacheKey);
 
   return data;
 }
-
 export async function updateExpense(expenseId, updatedExpense) {
   const { company_id } = updatedExpense;
 

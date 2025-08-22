@@ -294,7 +294,7 @@
 }
 
 .tm_accent_bg_20 {
-  background-color: #74CA33;
+  background-color: #74ca33;
 }
 
 .tm_green_bg {
@@ -906,6 +906,25 @@ hr {
         }
       }
     }
+
+    .qr_code {
+      height: 120px;
+      width: 130px;
+      border: 5px solid currentColor;
+      // background: #91ec/29b7;
+      border-radius: 5px;
+      padding-top: 5px;
+      padding-left: 10px;
+      position: absolute;
+      bottom: 30px;
+      right: 1px;
+      // transform: rotate(45deg);
+      .qr_code_in {
+        height: 100%;
+        width: 100%;
+        border: 20px solid currentColor;
+      }
+    }
     .tm_invoice_right {
       width: 40%;
     }
@@ -1200,7 +1219,7 @@ hr {
       opacity: 0;
       visibility: hidden;
       &:before {
-        content: "";
+        content: '';
         height: 10px;
         width: 10px;
         position: absolute;
@@ -1618,7 +1637,7 @@ hr {
   }
 
   .tm_accent_bg_20 {
-    background-color:  #74CA33 !important;
+    background-color: #74ca33 !important;
     -webkit-print-color-adjust: exact;
   }
   .tm_white_color {

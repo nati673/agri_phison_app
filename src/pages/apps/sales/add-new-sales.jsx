@@ -12,7 +12,9 @@ import {
   Divider,
   Stack,
   InputLabel,
-  Alert
+  Alert,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import { Add, Calculator, InfoCircle, Trash } from 'iconsax-react';
 import { useGetCustomer } from 'api/customer';
@@ -66,6 +68,7 @@ export default function SalesForm() {
   const [paidAmount, setPaidAmount] = useState('');
   const [paybackDate, setPaybackDate] = useState(null);
   const [salesType, setSalesType] = useState('normal');
+  const [isFullyPaid, setIsFullyPaid] = useState(true);
 
   const locationOptions = useMemo(
     () =>
@@ -198,7 +201,11 @@ export default function SalesForm() {
       ];
     });
   });
-
+  useEffect(() => {
+    if (isFullyPaid) {
+      setPaybackDate(null);
+    }
+  }, [isFullyPaid, totals.grandTotal]);
   const handleRemove = (idx) => setEntries(entries.filter((_, i) => i !== idx));
 
   const handleSubmit = async (e) => {
@@ -240,7 +247,8 @@ export default function SalesForm() {
         location_id: saleInfo.location.location_id,
         customer_id: saleInfo.customer.customer_id,
         payback_date: paybackDate,
-        paid_amount: Number(paidAmount),
+        paid_amount: paidAmount ? Number(paidAmount) : '',
+        is_fully_paid: isFullyPaid,
         grand_total: totals.grandTotal,
         sales_type: salesType,
         items: payload
@@ -265,7 +273,7 @@ export default function SalesForm() {
       setLoading(false);
     }
   };
-
+  const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0 && Number(entry.price) > 0);
   return (
     <form onSubmit={handleSubmit}>
       <MainCard sx={{ mb: 3, p: 3 }}>
@@ -548,22 +556,27 @@ export default function SalesForm() {
         </Box>
 
         <Divider sx={{ my: 1.5 }} />
+        <FormControlLabel
+          control={<Switch checked={isFullyPaid} onChange={(e) => setIsFullyPaid(e.target.checked)} color="primary" />}
+          label={isFullyPaid ? 'Fully Paid' : 'Not Fully Paid'}
+          sx={{ mb: 2 }}
+        />
 
         {/* Paid Amount Input */}
-        {salesType === 'normal' && (
+        {salesType === 'normal' && !isFullyPaid && (
           <TextField
             label="Enter Paid Amount"
             type="number"
             size="small"
             fullWidth
             value={paidAmount}
+            disabled={!hasValidEntry}
             onChange={(e) => setPaidAmount(e.target.value)}
             inputProps={{ min: 0, step: '0.01' }}
           />
         )}
 
-        {/* Unpaid Balance / Feedback */}
-        {paidAmount !== '' && (
+        {!isFullyPaid && (
           <Box
             display="flex"
             justifyContent="space-between"
@@ -582,31 +595,32 @@ export default function SalesForm() {
               {balance > 0
                 ? `ETB ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                 : balance < 0
-                  ? `Overpaid by ETB ${Math.abs(balance).toLocaleString(undefined, {
-                      minimumFractionDigits: 2
-                    })}`
-                  : 'Fully Paid'}
+                  ? `Overpaid by ETB ${Math.abs(balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                  : hasValidEntry
+                    ? 'Fully Paid'
+                    : 'No items added'}
             </Typography>
           </Box>
         )}
 
-        {paidAmount && Number(paidAmount) !== Number(totals.grandTotal) && (
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          {!isFullyPaid && (
             <Stack spacing={1} mt={2}>
               <InputLabel>Payback Date</InputLabel>
 
               <DatePicker
-                value={paybackDate} // Use Date object or null
-                onChange={(newValue) => setPaybackDate(newValue)} // Directly set Date object
+                value={paybackDate}
+                onChange={(newValue) => setPaybackDate(newValue)}
                 minDate={addDays(new Date(), 1)}
                 slotProps={{
                   textField: { InputLabelProps: { shrink: true }, size: 'small' }
                 }}
                 sx={{ '& .MuiInputBase-root': { height: 40 } }}
+                disabled={!hasValidEntry}
               />
             </Stack>
-          </LocalizationProvider>
-        )}
+          )}
+        </LocalizationProvider>
       </MainCard>
     </form>
   );

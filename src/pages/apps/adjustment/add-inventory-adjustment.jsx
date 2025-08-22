@@ -23,7 +23,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useTool } from 'contexts/ToolContext';
 import useAuth from 'hooks/useAuth';
 import useBarcodeScanner from 'utils/scan';
-import { useGetProducts } from 'api/products';
+import { fetchProductBatches, useGetProducts } from 'api/products';
 import { useGetBusinessUnit } from 'api/business_unit';
 import { useGetLocation } from 'api/location';
 import { addInventoryAdjustment } from 'api/adjustment';
@@ -47,18 +47,35 @@ const adjustmentTypes = [
   { label: 'Value', value: 'value' }
 ];
 
-const reasonCodes = [
-  { value: 'count_correction', label: 'Count Correction' },
-  { value: 'opening_stock', label: 'Opening Stock' },
-  { value: 'theft', label: 'Theft' },
-  { value: 'damage', label: 'Damage' },
-  { value: 'spoilage', label: 'Spoilage' },
-  { value: 'expired', label: 'Expired' },
-  { value: 'cost_correction', label: 'Cost Correction' },
-  { value: 'NRV_write_down', label: 'NRV Write-down' },
-  { value: 'standard_cost_update', label: 'Standard Cost Update' },
-  { value: 'other', label: 'Other' }
-];
+const reasonCodeMap = {
+  batch_qty: [
+    { value: 'count_correction', label: 'Count Correction' },
+    { value: 'theft', label: 'Theft' },
+    { value: 'damage', label: 'Damage' },
+    { value: 'spoilage', label: 'Spoilage' },
+    { value: 'expired', label: 'Expired' },
+    { value: 'opening_stock', label: 'Opening Stock' }
+  ],
+  stock_qty: [
+    { value: 'count_correction', label: 'Count Correction' },
+    { value: 'theft', label: 'Theft' },
+    { value: 'damage', label: 'Damage' },
+    { value: 'spoilage', label: 'Spoilage' },
+    { value: 'expired', label: 'Expired' },
+    { value: 'opening_stock', label: 'Opening Stock' }
+  ],
+  purchase_price: [
+    { value: 'cost_correction', label: 'Cost Correction' },
+    { value: 'NRV_write_down', label: 'NRV Write-down' },
+    { value: 'standard_cost_update', label: 'Standard Cost Update' },
+    { value: 'opening_stock', label: 'Opening Stock' }
+  ],
+  purchase_qty: [
+    { value: 'count_correction', label: 'Count Correction' },
+    { value: 'opening_stock', label: 'Opening Stock' }
+  ],
+  selling_price: [{ value: 'price_update', label: 'Price Update' }]
+};
 
 const inputStyle = {
   '& .MuiOutlinedInput-root': {
@@ -90,6 +107,17 @@ function ResponsiveHeaderRow({ label, children }) {
   );
 }
 
+const affectedTypes = [
+  // Quantity-related options
+  { label: 'Batch Quantity', value: 'batch_qty', group: 'quantity' },
+  { label: 'Stock Quantity', value: 'stock_qty', group: 'quantity' },
+  { label: 'Purchase Quantity', value: 'purchase_qty', group: 'quantity' },
+
+  // Price-related options
+  { label: 'Purchase Price', value: 'purchase_price', group: 'value' },
+  { label: 'Selling Price', value: 'selling_price', group: 'value' }
+];
+
 export default function AddInventoryAdjustment() {
   const { products } = useGetProducts();
   const { BusinessUnits } = useGetBusinessUnit();
@@ -97,7 +125,7 @@ export default function AddInventoryAdjustment() {
   const { user } = useAuth();
   const { setScanHandlerActive } = useTool();
   const newValueRefs = useRef([]);
-
+  const [affectedType, setAffectedType] = useState('stock_qty');
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === '/') {
@@ -310,7 +338,32 @@ export default function AddInventoryAdjustment() {
   const handleClearLine = (idx) => {
     setLines((prev) => prev.map((line, i) => (i === idx ? { ...initialLine } : line)));
   };
+  const filteredAffectedTypes = affectedTypes.filter((t) => t.group === headerInfo.adjustment_type);
+  const [productBatchesMap, setProductBatchesMap] = useState({});
 
+  useEffect(() => {
+    const fetchNeededBatches = async () => {
+      const neededProductIds = lines.map((line) => line.product?.product_id).filter((pid) => pid && !(pid in productBatchesMap));
+
+      if (neededProductIds.length === 0) return;
+
+      let mapCopy = { ...productBatchesMap };
+
+      for (const pid of neededProductIds) {
+        try {
+          // ✅ Pass location_id + business_unit_id if API supports filtering batches
+          const batchesResp = await fetchProductBatches(pid, headerInfo.business_unit?.business_unit_id, headerInfo.location?.location_id);
+          mapCopy[pid] = batchesResp.data || [];
+        } catch (err) {
+          mapCopy[pid] = [];
+        }
+      }
+
+      setProductBatchesMap(mapCopy);
+    };
+
+    fetchNeededBatches();
+  }, [lines, headerInfo.location?.location_id, headerInfo.business_unit?.business_unit_id]);
   return (
     <form onSubmit={handleSubmit}>
       {/* Header */}
@@ -356,13 +409,23 @@ export default function AddInventoryAdjustment() {
             ))}
           </RadioGroup>
         </ResponsiveHeaderRow>
-
+        <ResponsiveHeaderRow label="Affected Type">
+          <Autocomplete
+            fullWidth
+            options={filteredAffectedTypes}
+            getOptionLabel={(o) => o.label}
+            value={filteredAffectedTypes.find((at) => at.value === affectedType) || null}
+            onChange={(e, v) => setAffectedType(v ? v.value : filteredAffectedTypes[0].value)}
+            renderInput={(p) => <TextField {...p} size="small" />}
+            sx={requiredInputStyle}
+          />
+        </ResponsiveHeaderRow>
         <ResponsiveHeaderRow label="Reason">
           <Autocomplete
             fullWidth
-            options={reasonCodes}
-            getOptionLabel={(o) => o.label || ''}
-            value={reasonCodes.find((rc) => rc.value === headerInfo.reason_code) || null}
+            options={reasonCodeMap[affectedType]}
+            getOptionLabel={(o) => o.label}
+            value={reasonCodeMap[affectedType].find((rc) => rc.value === headerInfo.reason_code) || null}
             onChange={(e, v) => handleHeaderChange('reason_code', v ? v.value : '')}
             renderInput={(p) => <TextField {...p} size="small" />}
             sx={requiredInputStyle}
@@ -443,7 +506,18 @@ export default function AddInventoryAdjustment() {
                     disabled={!headerInfo.business_unit || !headerInfo.location}
                   />
                 </Grid>
-
+                <Grid item xs={12} sm={3}>
+                  <Autocomplete
+                    fullWidth
+                    options={productBatchesMap[line.product?.product_id] || []}
+                    getOptionLabel={(b) => b.batch_code || `Batch ${b.batch_id}`}
+                    value={line.batch || null}
+                    onChange={(e, v) => handleLineChange(idx, 'batch', v)}
+                    renderInput={(p) => <TextField {...p} label="Batch" size="small" />}
+                    disabled={!line.product}
+                    sx={requiredInputStyle}
+                  />
+                </Grid>
                 {/* Quantity Inputs */}
                 {headerInfo.adjustment_type === 'quantity' && (
                   <>

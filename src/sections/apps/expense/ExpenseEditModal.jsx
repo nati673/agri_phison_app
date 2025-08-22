@@ -6,13 +6,14 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import toast from 'react-hot-toast';
 
-import { expenseCategories, paymentMethods } from './ExpenseSettings'; // import your categories, methods array
+import { expenseCategories, paymentMethods } from './ExpenseSettings';
 import { useGetLocation } from 'api/location';
 import { useGetBusinessUnit } from 'api/business_unit';
-import { updateExpense } from 'api/expense'; // <-- your PATCH/PUT API
+import { updateExpense } from 'api/expense';
 import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
 import { renderLocationOption } from 'components/inputs/renderLocationOption';
 import useAuth from 'hooks/useAuth';
+import { requiredInputStyle } from 'components/inputs/requiredInputStyle';
 
 const inputStyle = {
   '& .MuiOutlinedInput-root': { borderRadius: '10px', transition: 'all 0.2s' },
@@ -24,7 +25,6 @@ function ExpenseEditModal({ open, onClose, expense }) {
   const { locations } = useGetLocation();
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  // Set initial form state from expense prop
   const [form, setForm] = useState({
     business_unit: null,
     location: null,
@@ -36,7 +36,6 @@ function ExpenseEditModal({ open, onClose, expense }) {
     payment_method: ''
   });
 
-  // When expense changes, reset form with its values
   useEffect(() => {
     if (expense) {
       setForm({
@@ -118,7 +117,7 @@ function ExpenseEditModal({ open, onClose, expense }) {
               renderOption={renderBusinessUnitOption}
               isOptionEqualToValue={(o, v) => o.business_unit_id === v.business_unit_id}
               renderInput={(p) => <TextField {...p} size="small" required label="Business Unit" />}
-              sx={inputStyle}
+              sx={requiredInputStyle}
             />
             {/* Location */}
             <Autocomplete
@@ -130,7 +129,7 @@ function ExpenseEditModal({ open, onClose, expense }) {
               renderOption={renderLocationOption}
               isOptionEqualToValue={(o, v) => o.location_id === v.location_id}
               renderInput={(p) => <TextField {...p} size="small" required label="Location" />}
-              sx={inputStyle}
+              sx={requiredInputStyle}
               disabled={!form.business_unit}
             />
             {/* Paid To */}
@@ -141,13 +140,14 @@ function ExpenseEditModal({ open, onClose, expense }) {
               size="small"
               required
               label="Paid To"
-              sx={inputStyle}
+              sx={requiredInputStyle}
             />
             {/* Expense Date */}
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 value={form.expense_date}
                 onChange={(date) => handleChange('expense_date', date)}
+                readOnly
                 slotProps={{
                   textField: {
                     size: 'small',
@@ -188,7 +188,7 @@ function ExpenseEditModal({ open, onClose, expense }) {
               value={expenseCategories.find((ec) => ec.value === form.category) || null}
               onChange={(e, v) => handleChange('category', v ? v.value : '')}
               renderInput={(p) => <TextField {...p} size="small" required label="Category" />}
-              sx={inputStyle}
+              sx={requiredInputStyle}
             />
             {/* Amount */}
             <TextField
@@ -201,7 +201,7 @@ function ExpenseEditModal({ open, onClose, expense }) {
               error={form.amount !== '' && !isValidAmount(form.amount)}
               helperText={form.amount !== '' && !isValidAmount(form.amount) ? 'Amount must be greater than zero!' : ''}
               label="Amount"
-              sx={inputStyle}
+              sx={requiredInputStyle}
             />
             <Box display="flex" gap={2} alignItems="center" mt={2}>
               <Button variant="contained" type="submit" disabled={loading}>

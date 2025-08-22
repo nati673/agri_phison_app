@@ -61,6 +61,7 @@ import { Add, ArrowDown2, ArrowUp2, Edit, Eye, Trash } from 'iconsax-react';
 import AlertProductDelete from 'sections/apps/product-center/products/AlertProductDelete';
 import ProductView from 'sections/apps/product-center/products/ProductView';
 import ProductModal from 'sections/apps/product-center/products/ProductModal';
+import { ProductStockModal } from 'sections/apps/product-center/products/ProductStockModal';
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'container' })(({ theme, open, container }) => ({
   flexGrow: 1,
@@ -227,6 +228,18 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [ProductDeleteId, setProductDeleteId] = useState('');
 
+  const [isStockModalOpen, setStockModalOpen] = useState(false);
+  const [selectedProductForStock, setSelectedProductForStock] = useState(null);
+
+  const handleOpenStockModal = (product) => {
+    setSelectedProductForStock(product);
+    setStockModalOpen(true);
+  };
+  const handleCloseStockModal = () => {
+    setStockModalOpen(false);
+    setSelectedProductForStock(null);
+  };
+
   const handleClose = () => {
     setOpen(!open);
   };
@@ -364,7 +377,17 @@ export default function ProductsPage() {
                   {collapseIcon}
                 </IconButton>
               </Tooltip>
-
+              <Tooltip title="View Stock">
+                <IconButton
+                  color="info"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenStockModal(row.original);
+                  }}
+                >
+                  View Stock
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Edit">
                 <IconButton
                   color="primary"
@@ -428,6 +451,7 @@ export default function ProductsPage() {
           Product={selectedProduct}
           filters={filter}
         />
+        <ProductStockModal open={isStockModalOpen} onClose={handleCloseStockModal} product={selectedProductForStock} />
       </Grid>
     );
   } else {

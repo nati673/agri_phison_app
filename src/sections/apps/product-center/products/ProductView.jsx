@@ -54,20 +54,7 @@ export default function ProductViewModern({ data }) {
   const [barcode, setBarcode] = useState(null);
   const { user } = useAuth();
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const filteredBatches = useMemo(() => {
-    if (!search) return data.batches;
-    return data.batches.filter((batch) =>
-      Object.values(batch).some((value) => value && value.toString().toLowerCase().includes(search.toLowerCase()))
-    );
-  }, [data.batches, search]);
-  // Paginate
-  const paginatedBatches = useMemo(() => {
-    const start = page * rowsPerPage;
-    return filteredBatches.slice(start, start + rowsPerPage);
-  }, [filteredBatches, page, rowsPerPage]);
   useEffect(() => {
     const fetchBarcode = async () => {
       if (data?.sku && user?.company_id) {
@@ -440,14 +427,14 @@ export default function ProductViewModern({ data }) {
                 </Grid>
               )}
 
-              {Array.isArray(data.batches) && data.batches.length > 0 && (
+              {/* {Array.isArray(data.batches) && data.batches.length > 0 && (
                 <Grid item xs={12}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
                     Product Batches
                   </Typography>
                   <BatchTable batches={data.batches} />
                 </Grid>
-              )}
+              )} */}
             </Grid>
           </Stack>
         </Grid>

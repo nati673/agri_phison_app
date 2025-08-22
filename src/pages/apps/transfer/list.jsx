@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
-import { useLoaderData } from 'react-router-dom';
+import { useLoaderData, useNavigate } from 'react-router-dom';
 import {
   Box,
   Grid,
@@ -158,7 +158,7 @@ export default function StockTransferListPage() {
   const [isStatusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedStatusTransfer, setSelectedStatusTransfer] = useState(null);
   const [actionDone, setActionDone] = useState(false);
-
+  const navigate = useNavigate();
   const [filter, setFilter] = useState({
     business_unit_id: '',
     from_location_id: '',
@@ -258,8 +258,8 @@ export default function StockTransferListPage() {
                 color="primary"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedTransfer(row.original);
-                  setModalOpen(true);
+
+                  navigate(`/workspace/transfers/detail/${row.original.invoice_access_token}`);
                 }}
               >
                 <Eye />
@@ -296,6 +296,7 @@ export default function StockTransferListPage() {
                   e.stopPropagation();
                   setOpenDelete(true);
                   setDeleteId(row.original.transfer_id);
+                  setSelectedStatusTransfer(row.original);
                 }}
               >
                 <Trash />
@@ -337,6 +338,7 @@ export default function StockTransferListPage() {
           open={openDelete}
           handleClose={() => setOpenDelete(false)}
           actionDone={setActionDone}
+          status={selectedStatusTransfer?.transfer_status}
         />
         <StockTransferStatusModal
           open={isStatusModalOpen}
@@ -351,7 +353,6 @@ export default function StockTransferListPage() {
           transfer={selectedTransfer}
           filters={filter}
         />
-        <PhotostudioInvoice />
       </Main>
     </Box>
   );

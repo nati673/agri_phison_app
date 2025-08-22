@@ -40,6 +40,58 @@ export function useGetProducts() {
   return memoizedValue;
 }
 
+export async function fetchProductBatches(productId, businessUnitId = null, locationId = null) {
+  if (!productId) {
+    return { data: [], error: 'No productId provided' };
+  }
+
+  try {
+    const query = new URLSearchParams();
+    query.append('product_id', productId);
+    if (businessUnitId != null) query.append('business_unit_id', businessUnitId);
+    if (locationId != null) query.append('location_id', locationId);
+
+    const url = `/product/batches?${query.toString()}`;
+
+    console.log('Fetching batches from:', url);
+
+    const response = await fetcher(url);
+
+    return {
+      data: response?.success ? response.data || [] : [],
+      error: response?.success ? null : response?.message || null
+    };
+  } catch (error) {
+    return { data: [], error: error.message || String(error) };
+  }
+}
+
+export function useGetProductStock(productId) {
+  const { user } = useAuth();
+  const companyId = user?.company_id;
+
+  // Only fetch if companyId is set
+  const endpoint = companyId ? `/products/stock/${productId}` : null;
+
+  const { data, isLoading, error, isValidating } = useSWR(endpoint, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
+
+  const memoizedValue = useMemo(
+    () => ({
+      productStock: data?.data || [],
+      productStockLoading: isLoading,
+      productStockError: error,
+      productStockValidating: isValidating,
+      productStockEmpty: !isLoading && !(data?.data && data.data.length)
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
 export function useGetSmallQuantityProducts() {
   const { user } = useAuth();
   const companyId = user?.company_id;

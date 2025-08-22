@@ -15,10 +15,7 @@ import { createExpenses } from 'api/expense';
 import { expenseCategories, paymentMethods } from 'sections/apps/expense/ExpenseSettings';
 import { useNavigate } from 'react-router';
 
-// Expense categories
-
-const recentPaidTo = ['Amazon', 'Acme Supplies', 'Best Taxi'];
-const suggestedCategories = expenseCategories.filter((ec) => ['Office Supplies', 'Transport', 'Travel'].includes(ec.label));
+// const recentPaidTo = ['Amazon', 'Acme Supplies', 'Best Taxi'];
 
 const inputStyle = {
   '& .MuiOutlinedInput-root': { borderRadius: '10px', transition: 'all 0.2s' },
@@ -71,7 +68,7 @@ export default function AddExpense() {
   const isValidAmount = (val) => !!val && parseFloat(val) > 0;
 
   const autoCategories = useMemo(
-    () => (suggestedCategories.length ? suggestedCategories : expenseCategories),
+    () => (expenseCategories.length ? expenseCategories : expenseCategories),
     [headerInfo.business_unit, headerInfo.location]
   );
 
@@ -118,6 +115,9 @@ export default function AddExpense() {
 
       if (res.success) {
         toast.success(res.message);
+        setTimeout(() => {
+          window.location.href = '/workspace/expense/list';
+        }, 2000);
       }
 
       setHeaderInfo({
@@ -131,8 +131,6 @@ export default function AddExpense() {
         payment_method: ''
       });
       setReceiptFile(null);
-      navigate('/workspace/expense/add-expense');
-      // navigate to
     } catch (error) {
       console.error(error);
       toast.error(error.message || 'Failed to add expense');
@@ -176,13 +174,13 @@ export default function AddExpense() {
 
         {/* Paid To */}
         <ResponsiveHeaderRow label="Paid To:" tooltip="Who received the payment?">
-          <Autocomplete
-            freeSolo
+          <TextField
             fullWidth
-            options={recentPaidTo}
-            inputValue={headerInfo.paid_to}
-            onInputChange={(e, v) => handleHeaderChange('paid_to', v)}
-            renderInput={(p) => <TextField {...p} size="small" required sx={inputStyle} />}
+            value={headerInfo.paid_to}
+            onChange={(e) => handleHeaderChange('paid_to', e.target.value)}
+            size="small"
+            required
+            // label="Paid To"
             sx={requiredInputStyle}
           />
         </ResponsiveHeaderRow>
@@ -260,7 +258,10 @@ export default function AddExpense() {
       {/* ACTIONS */}
       <Box display="flex" gap={2} alignItems="center">
         <Button variant="contained" type="submit" disabled={loading} startIcon={<Add />}>
-          {loading ? <CircularProgress size={22} /> : 'Submit'}
+          {loading ? <CircularProgress size={22} /> : 'Add Expense'}
+        </Button>
+        <Button variant="outlined" color="error" onClick={() => navigate('/workspace/expense/list')}>
+          Cancel
         </Button>
       </Box>
     </form>

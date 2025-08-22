@@ -18,7 +18,7 @@ import { deleteTransfer } from 'api/transfer';
 
 // ==============================|| Stock Transfer - DELETE ||============================== //
 
-export default function AlertStockTransferDelete({ id, company_id, title, open, handleClose, actionDone }) {
+export default function AlertStockTransferDelete({ id, company_id, title, open, handleClose, actionDone , status}) {
   const deleteHandler = async () => {
     try {
       const res = await deleteTransfer(id, company_id);
@@ -54,12 +54,32 @@ export default function AlertStockTransferDelete({ id, company_id, title, open, 
             </Typography>
 
             <Typography align="center" id="transfer-delete-description" color="text.secondary">
-              You are about to remove{' '}
-              <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                “Transfer ID: {title}”
-              </Typography>
-              . <br />
-              This will take it off your records. You can always add a new transfer later if needed.
+              {status === 'pending' ? (
+                <>
+                  You are about to remove{' '}
+                  <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                    “Transfer ID: {title}”
+                  </Typography>
+                  .<br />
+                  <b>Note:</b> When a pending stock transfer is deleted, any items transferred will automatically be restocked to their
+                  original location.
+                  <br />
+                  If you made a mistake, you can always add a new transfer later.
+                </>
+              ) : (
+                <>
+                  <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                    This transfer has already been {status} and cannot be deleted.
+                  </Typography>
+                  <br />
+                  When a transfer is <b>approved</b>, the inventory and records are finalized.
+                  <br />
+                  When it is <b>rejected</b>, items are already reversed back to their original place.
+                  <br />
+                  <b>Recommendation:</b> Use <span style={{ fontWeight: 600, color: '#1976D2' }}>stock adjustment</span> if you need to
+                  correct inventory in these cases.
+                </>
+              )}
             </Typography>
           </Stack>
 

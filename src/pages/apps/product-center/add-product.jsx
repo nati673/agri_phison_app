@@ -46,6 +46,7 @@ import GHS07 from '../../../assets/pictograms/GHS07.png';
 import GHS08 from '../../../assets/pictograms/GHS08.png';
 import GHS09 from '../../../assets/pictograms/GHS09.png';
 import { requiredInputStyle } from 'components/inputs/requiredInputStyle';
+import { renderProductOption } from 'components/inputs/renderProductOption';
 
 const pictogramOptions = [
   { id: 'GHS01', label: 'Explosive', image: GHS01 },
@@ -154,7 +155,7 @@ export default function AddNewProductSectioned() {
   const { user } = useAuth();
 
   const [customPrecaution, setCustomPrecaution] = useState('');
-
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [productAutoFilled, setProductAutoFilled] = useState(false);
   const { suggestions, loading } = useGetProductSuggestions({
@@ -182,19 +183,39 @@ export default function AddNewProductSectioned() {
         validationSchema={AddProductSchema}
         enableReinitialize
         onSubmit={async (values, { setSubmitting, setErrors, resetForm }) => {
-          const formattedPayload = {
-            ...values,
-            company_id: user?.company_id,
-            ingredients: values.ingredients.join(','),
-            use_for: values.use_for.join(','),
-            target_issues: values.target_issues.join(','),
-            storage_precautions: Array.isArray(values.storage_precautions)
-              ? values.storage_precautions.join(',')
-              : values.storage_precautions,
-            disposal_instructions: Array.isArray(values.disposal_instructions)
-              ? values.disposal_instructions.join(',')
-              : values.disposal_instructions
-          };
+          let formattedPayload;
+          if (productAutoFilled) {
+            formattedPayload = {
+              is_selected: true,
+              product_id: selectedProduct.product_id,
+              business_unit_id: values.business_unit_id,
+              location_id: values.location_id,
+              quantity: values.quantity,
+              unit_price: values.unit_price,
+              purchase_price: values.purchase_price,
+              min_quantity: values.min_quantity,
+              max_quantity: values.max_quantity,
+              expires_at: values.expires_at,
+              manufacture_date: values.manufacture_date,
+              company_id: user?.company_id
+            };
+          } else {
+            formattedPayload = {
+              ...values,
+              company_id: user?.company_id,
+              ingredients: values.ingredients.join(','),
+              use_for: values.use_for.join(','),
+              target_issues: values.target_issues.join(','),
+              storage_precautions: Array.isArray(values.storage_precautions)
+                ? values.storage_precautions.join(',')
+                : values.storage_precautions,
+              disposal_instructions: Array.isArray(values.disposal_instructions)
+                ? values.disposal_instructions.join(',')
+                : values.disposal_instructions,
+              is_selected: productAutoFilled
+            };
+          }
+
           try {
             setSubmitting(true);
             const createResult = await createProduct(user?.company_id, formattedPayload);
@@ -216,95 +237,105 @@ export default function AddNewProductSectioned() {
         {({ values, setFieldValue, errors, touched, handleChange, handleBlur, isSubmitting, handleSubmit }) => (
           <Form onSubmit={handleSubmit} autoComplete="off">
             {/* SECTION: General Info */}
+
+            <MainCard title="Product Catalog Search" sx={{ mb: 2 }}>
+              <Autocomplete
+                freeSolo
+                loading={loading}
+                value={values.product_name || ''}
+                inputValue={values.product_name || ''}
+                options={Array.isArray(suggestions) ? suggestions : []}
+                getOptionLabel={(option) => (typeof option === 'string' ? option : option.product_name || '')}
+                renderOption={renderProductOption}
+                onInputChange={(e, val) => {
+                  setProductAutoFilled(false);
+                  setProductSearch(val);
+                }}
+                onChange={(e, newValue) => {
+                  let selected = null;
+                  if (typeof newValue === 'string') {
+                    selected = suggestions?.find((s) => s.product_name === newValue);
+                  } else if (typeof newValue === 'object') {
+                    selected = newValue;
+                  }
+                  if (!selected) {
+                    setProductAutoFilled(false);
+                    setSelectedProduct(null);
+
+                    setFieldValue('product_name', '');
+                    setFieldValue('product_name_localized', '');
+                    setFieldValue('product_unit', '');
+                    setFieldValue('category_id', '');
+                    setFieldValue('sku', '');
+                    setFieldValue('product_volume', '');
+                    setFieldValue('business_unit_id', '');
+                    setFieldValue('location_id', '');
+
+                    setFieldValue('ingredients', []);
+                    setFieldValue('use_for', []);
+                    setFieldValue('target_issues', []);
+                    setFieldValue('usage', '');
+
+                    setFieldValue('is_hazardous', false);
+                    setFieldValue('pictograms', '');
+
+                    setFieldValue('storage_precautions', []);
+                    setFieldValue('disposal_instructions', []);
+                    return;
+                  }
+                  setProductAutoFilled(true);
+                  setSelectedProduct(selected);
+
+                  setFieldValue('product_name', selected.product_name);
+                  setFieldValue('product_name_localized', selected.product_name_localized);
+                  setFieldValue('product_unit', selected.product_unit || '');
+                  setFieldValue('category_id', selected.category_id || '');
+                  setFieldValue('sku', selected.sku || '');
+                  setFieldValue('product_volume', selected.product_volume || '');
+                  setFieldValue('business_unit_id', selected.business_unit_id || '');
+                  setFieldValue('location_id', selected.location_id || '');
+
+                  setFieldValue('ingredients', selected.ingredients ? selected.ingredients.split(',') : []);
+                  setFieldValue('use_for', selected.use_for ? selected.use_for.split(',') : []);
+                  setFieldValue('target_issues', selected.target_issues ? selected.target_issues.split(',') : []);
+                  setFieldValue('usage', selected.usage || '');
+
+                  setFieldValue('is_hazardous', !!selected.is_hazardous);
+                  setFieldValue('pictograms', selected.pictograms || '');
+
+                  setFieldValue('storage_precautions', selected.storage_precautions ? selected.storage_precautions.split(',') : []);
+                  setFieldValue('disposal_instructions', selected.disposal_instructions ? selected.disposal_instructions.split(',') : []);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Search or select product"
+                    placeholder="Type to search…"
+                    sx={{ minWidth: 270 }}
+                    error={!!getError('product_name', touched, errors)}
+                    helperText={getError('product_name', touched, errors)}
+                    onBlur={handleBlur}
+                  />
+                )}
+              />
+              {productAutoFilled && (
+                <FormHelperText sx={{ color: 'green' }}>Product selected! Catalog details below are read-only.</FormHelperText>
+              )}
+            </MainCard>
+
             <MainCard title="General Info" sx={{ mb: 3 }}>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <InputLabel>Product Name</InputLabel>
-                  <Autocomplete
-                    freeSolo
-                    loading={loading}
-                    value={values.product_name || ''}
-                    inputValue={values.product_name || ''}
-                    onInputChange={(e, val, reason) => {
-                      setProductAutoFilled(false);
-                      if (val && val.length >= 2) {
-                        setProductSearch(val);
-                      } else {
-                        setProductSearch('');
-                      }
-                      setFieldValue('product_name', val);
-                    }}
-                    onChange={async (e, newValue) => {
-                      // newValue can be a string (creatable) or product object (from suggestions)
-
-                      if (!newValue) {
-                        setProductAutoFilled(false);
-                        setFieldValue('product_name', '');
-                        setFieldValue('product_name_localized', '');
-                        setFieldValue('product_unit', '');
-                        setFieldValue('category_id', '');
-                        setFieldValue('sku', '');
-                        setFieldValue('product_volume', '');
-                        // setFieldValue('unit_price', '');
-                        // setFieldValue('purchase_price', '');
-                        // ...add any other fields you wish to clear
-                        return;
-                      }
-
-                      let selected = null;
-                      if (typeof newValue === 'string') {
-                        // Try to match to a suggestion (optional, if you want to 'resolve' string values)
-                        selected = suggestions?.find((s) => s.product_name === newValue);
-                      } else if (typeof newValue === 'object' && newValue) {
-                        selected = newValue;
-                      }
-                      if (selected && typeof selected === 'object') {
-                        setProductAutoFilled(true);
-                        setFieldValue('product_name', selected.product_name);
-                        setFieldValue('product_name_localized', selected.product_name_localized);
-                        setFieldValue('product_unit', selected.product_unit || '');
-                        setFieldValue('category_id', selected.category_id || '');
-                        setFieldValue('sku', selected.sku || '');
-                        setFieldValue('product_volume', selected.product_volume || '');
-                        // setFieldValue('unit_price', selected.unit_price || '');
-                        // setFieldValue('purchase_price', selected.purchase_price || '');
-                        // ...add any other fields you wish
-                      } else if (typeof newValue === 'string') {
-                        setFieldValue('product_name', newValue);
-                        setProductAutoFilled(false);
-                      }
-                    }}
-                    options={Array.isArray(suggestions) ? suggestions : []}
-                    getOptionLabel={(option) => (typeof option === 'string' ? option : option.product_name || '')}
-                    renderOption={(props, opt) =>
-                      typeof opt === 'string' ? (
-                        <li {...props}>{opt}</li>
-                      ) : (
-                        <li {...props}>
-                          {opt.product_name}
-                          {opt.sku ? (
-                            <Box component="span" sx={{ color: 'gray', fontSize: 12, ml: 1 }}>
-                              ({opt.sku})
-                            </Box>
-                          ) : null}
-                        </li>
-                      )
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        name="product_name"
-                        placeholder="Enter or select product name"
-                        sx={requiredInputStyle}
-                        error={!!getError('product_name', touched, errors)}
-                        helperText={getError('product_name', touched, errors)}
-                        onBlur={handleBlur}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    name="product_name"
+                    placeholder="Enter product name"
+                    value={values.product_name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    sx={requiredInputStyle}
                   />
-                  {productAutoFilled && (
-                    <FormHelperText sx={{ color: 'green' }}>Fields autofilled. Edit details before submitting if needed.</FormHelperText>
-                  )}
                 </Grid>
 
                 <Grid item xs={12} md={6}>
@@ -562,7 +593,12 @@ export default function AddNewProductSectioned() {
               </Grid>
             </MainCard>
             {/* SECTION: Batch & Expiry */}
-            <MainCard title="Batch & Expiry" sx={{ mb: 3 }}>
+            <MainCard
+              sx={{
+                mb: 3
+              }}
+              title="Batch & Expiry"
+            >
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -602,7 +638,15 @@ export default function AddNewProductSectioned() {
               </Grid>
             </MainCard>
             {/* SECTION: Product Attributes & Usage */}
-            <MainCard title="Product Attributes & Usage" sx={{ mb: 3 }}>
+
+            <MainCard
+              sx={{
+                mb: 3,
+                pointerEvents: productAutoFilled ? 'none' : 'auto',
+                opacity: productAutoFilled ? 0.6 : 1
+              }}
+              title="Product Attributes & Usage"
+            >
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <InputLabel sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -699,7 +743,14 @@ export default function AddNewProductSectioned() {
               </Grid>
             </MainCard>
             {/* SECTION: Safety & Compliance */}
-            <MainCard title="Safety & Compliance" sx={{ mb: 3 }}>
+            <MainCard
+              sx={{
+                mb: 3,
+                pointerEvents: productAutoFilled ? 'none' : 'auto',
+                opacity: productAutoFilled ? 0.6 : 1
+              }}
+              title="Safety & Compliance"
+            >
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <InputLabel>Is Hazardous</InputLabel>
@@ -727,7 +778,14 @@ export default function AddNewProductSectioned() {
               </Grid>
             </MainCard>
             {/* SECTION: Storage & Disposal */}
-            <MainCard title="Storage & Disposal" sx={{ mb: 3 }}>
+            <MainCard
+              sx={{
+                mb: 3,
+                pointerEvents: productAutoFilled ? 'none' : 'auto',
+                opacity: productAutoFilled ? 0.6 : 1
+              }}
+              title="Storage & Disposal"
+            >
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>

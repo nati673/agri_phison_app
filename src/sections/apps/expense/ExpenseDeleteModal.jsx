@@ -10,7 +10,6 @@ import { PopupTransition } from 'components/@extended/Transitions';
 import { Trash } from 'iconsax-react';
 import toast from 'react-hot-toast';
 
-// 🟢 Import your Expense delete API (create this function in api/expense.js)
 import { deleteExpense } from 'api/expense';
 import useAuth from 'hooks/useAuth';
 
@@ -20,7 +19,7 @@ export default function AlertExpenseDelete({ id, open, handleClose, actionDone, 
   const company_id = user?.company_id;
   const deleteHandler = async () => {
     try {
-      const res = await deleteExpense(id, company_id); // call Expense API
+      const res = await deleteExpense(id, company_id);
       if (res.success) {
         toast.success(res.message);
         handleClose();

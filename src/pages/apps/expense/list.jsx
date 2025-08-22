@@ -23,6 +23,7 @@ import { useGetExpenses } from 'api/expense';
 
 import { Add, SearchNormal1 } from 'iconsax-react';
 import { useNavigate } from 'react-router';
+import EmptyExpenseCard from 'sections/apps/expense/EmptyExpenseCard';
 
 // Filter and sort options - customize as needed
 const sortFields = [
@@ -47,7 +48,7 @@ function sortExpenses(data, sortBy) {
 
 export default function ExpenseCardPage() {
   const matchDownSM = useMediaQuery((theme) => theme.breakpoints.down('sm'));
-  const { expenses: lists } = useGetExpenses();
+  const { expenses: lists, expensesEmpty, expensesError, expensesLoading, expensesValidating } = useGetExpenses();
 
   const [sortBy, setSortBy] = useState('Default');
   const [globalFilter, setGlobalFilter] = useState('');
@@ -143,8 +144,9 @@ export default function ExpenseCardPage() {
             </Fade>
           ))
         ) : (
-          // <EmptyExpenseCard title="No expenses available." />
-          <></>
+          <Grid item xs={12}>
+            <EmptyExpenseCard onAddExpense={() => navigate('/workspace/expense/add-expense')} />
+          </Grid>
         )}
       </Grid>
       <Stack spacing={2} sx={{ p: 2.5 }} alignItems="flex-end">

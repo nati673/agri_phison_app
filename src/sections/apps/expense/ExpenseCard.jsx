@@ -48,10 +48,10 @@ export default function ExpenseCard({ expense }) {
               <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
                 <Stack direction="row" alignItems="center" gap={1}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {expense.paid_to}
+                    {expense?.paid_to}
                   </Typography>
                   <Chip
-                    label={expense.unit_name}
+                    label={expense?.unit_name}
                     size="small"
                     sx={{
                       bgcolor: '#E8F5E9',
@@ -98,14 +98,14 @@ export default function ExpenseCard({ expense }) {
                     letterSpacing: 0.5
                   }}
                 >
-                  Birr {currency(expense.amount)}
+                  Birr {currency(expense?.amount)}
                 </Typography>
               </Stack>
             </Grid>
             <Grid item xs={12}>
               <Chip
                 icon={<Category size={18} />}
-                label={expense.category}
+                label={expense?.category}
                 sx={{
                   color: 'text.primary',
                   borderRadius: 1,
@@ -116,7 +116,7 @@ export default function ExpenseCard({ expense }) {
             </Grid>
             <Grid item xs={12}>
               <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                {expense.description}
+                {expense?.description}
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -124,19 +124,19 @@ export default function ExpenseCard({ expense }) {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Card size={18} />
                   <Typography variant="body2" color="text.secondary">
-                    {expense.payment_method}
+                    {expense?.payment_method}
                   </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Calendar size={18} />
                   <Typography variant="body2" color="text.secondary">
-                    {new Date(expense.expense_date).toLocaleDateString()}
+                    {new Date(expense?.expense_date).toLocaleDateString()}
                   </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Location size={18} />
                   <Typography variant="body2" color="text.secondary">
-                    {expense.location_name}
+                    {expense?.location_name}
                   </Typography>
                 </Stack>
               </Stack>
@@ -145,22 +145,22 @@ export default function ExpenseCard({ expense }) {
               <Stack direction="row" alignItems="center" gap={2} mt={1}>
                 <Avatar
                   alt="Avatar"
-                  src={expense?.profile ? `${import.meta.env.VITE_APP_API_URL}/user/profile/${expense?.profile}` : expense.added_by_name[0]}
+                  src={expense?.profile ? `${import.meta.env.VITE_APP_API_URL}/user/profile/${expense?.profile}` : 'N'}
                   sx={{ width: 30, height: 30 }}
                 />
                 <Box>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {expense.added_by_name}
+                    {expense?.added_by_name}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {expense.added_by_email}
+                    {expense?.added_by_email}
                   </Typography>
                 </Box>
               </Stack>
             </Grid>
             <Grid item xs={12}>
               <Typography variant="caption" color="text.secondary">
-                <Chip size="small" icon={<Location size={16} />} label={expense.location_type} sx={{ color: 'secondary.main', ml: 1 }} />
+                <Chip size="small" icon={<Location size={16} />} label={expense?.location_type} sx={{ color: 'secondary.main', ml: 1 }} />
               </Typography>
             </Grid>
           </Grid>
@@ -168,9 +168,9 @@ export default function ExpenseCard({ expense }) {
       </Fade>
 
       <AlertExpenseDelete
-        id={Number(expense.expense_id)}
+        id={Number(expense?.expense_id)}
         open={openDelete}
-        title={expense.paid_to}
+        title={expense?.paid_to}
         handleClose={() => setOpenDelete(false)}
       />
       <ExpenseEditModal open={openEdit} onClose={() => setOpenEdit(false)} expense={expense} />
