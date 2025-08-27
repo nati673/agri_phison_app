@@ -238,7 +238,7 @@ export default function AddNewProductSectioned() {
           <Form onSubmit={handleSubmit} autoComplete="off">
             {/* SECTION: General Info */}
 
-            <MainCard title="Product Catalog Search" sx={{ mb: 2 }}>
+            {/* <MainCard title="Product Catalog Search" sx={{ mb: 2 }}>
               <Autocomplete
                 freeSolo
                 loading={loading}
@@ -321,7 +321,7 @@ export default function AddNewProductSectioned() {
               {productAutoFilled && (
                 <FormHelperText sx={{ color: 'green' }}>Product selected! Catalog details below are read-only.</FormHelperText>
               )}
-            </MainCard>
+            </MainCard> */}
 
             <MainCard title="General Info" sx={{ mb: 3 }}>
               <Grid container spacing={2}>
@@ -603,22 +603,6 @@ export default function AddNewProductSectioned() {
                 <Grid item xs={12} md={6}>
                   <LocalizationProvider dateAdapter={AdapterDateFns}>
                     <Stack spacing={1}>
-                      <InputLabel>Expiry Date</InputLabel>
-                      <DatePicker
-                        value={values.expires_at ? new Date(values.expires_at) : null}
-                        onChange={(nv) => setFieldValue('expires_at', nv ? format(nv, 'yyyy-MM-dd') : '')}
-                        format="yyyy-MM-dd"
-                        slotProps={{
-                          textField: { InputLabelProps: { shrink: true } }
-                        }}
-                        sx={{ '& .MuiInputBase-root': { height: 48 } }}
-                      />
-                    </Stack>
-                  </LocalizationProvider>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <Stack spacing={1}>
                       <InputLabel>Manufacture Date</InputLabel>
                       <DatePicker
                         value={values.manufacture_date ? new Date(values.manufacture_date) : null}
@@ -632,6 +616,22 @@ export default function AddNewProductSectioned() {
                       <FormHelperText error={!!(touched.manufacture_date && errors.manufacture_date)}>
                         {touched.manufacture_date && typeof errors.manufacture_date === 'string' ? errors.manufacture_date : ''}
                       </FormHelperText>
+                    </Stack>
+                  </LocalizationProvider>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <Stack spacing={1}>
+                      <InputLabel>Expiry Date</InputLabel>
+                      <DatePicker
+                        value={values.expires_at ? new Date(values.expires_at) : null}
+                        onChange={(nv) => setFieldValue('expires_at', nv ? format(nv, 'yyyy-MM-dd') : '')}
+                        format="yyyy-MM-dd"
+                        slotProps={{
+                          textField: { InputLabelProps: { shrink: true } }
+                        }}
+                        sx={{ '& .MuiInputBase-root': { height: 48 } }}
+                      />
                     </Stack>
                   </LocalizationProvider>
                 </Grid>

@@ -57,11 +57,33 @@ import {
   SelectColumnSorting,
   TablePagination
 } from 'components/third-party/react-table';
-import { Add, ArrowDown2, ArrowUp2, Edit, Eye, Trash } from 'iconsax-react';
+import {
+  Add,
+  ArrowDown2,
+  ArrowUp2,
+  Chart1,
+  Copy,
+  DocumentDownload,
+  DocumentText1,
+  Edit,
+  Eye,
+  InfoCircle,
+  Information,
+  More,
+  More2,
+  Share,
+  ShoppingBag,
+  TableDocument,
+  Trash
+} from 'iconsax-react';
 import AlertProductDelete from 'sections/apps/product-center/products/AlertProductDelete';
 import ProductView from 'sections/apps/product-center/products/ProductView';
 import ProductModal from 'sections/apps/product-center/products/ProductModal';
 import { ProductStockModal } from 'sections/apps/product-center/products/ProductStockModal';
+import RestockProductModal from 'sections/apps/product-center/products/RestockProductModal';
+import { ProductBatchesModal } from 'sections/apps/product-center/products/ProductBatchesModal';
+import { ListItemIcon, ListItemText, Menu, MenuItem } from '@mui/material';
+import { useGetBusinessUnit } from 'api/business_unit';
 
 const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && prop !== 'container' })(({ theme, open, container }) => ({
   flexGrow: 1,
@@ -217,6 +239,7 @@ export default function ProductsPage() {
   const { cart } = useGetCart();
   const { user } = useAuth();
   const { container } = useConfig();
+  const { BusinessUnits } = useGetBusinessUnit();
 
   const [isLoading, setLoading] = useState(true);
   useEffect(() => {
@@ -230,14 +253,43 @@ export default function ProductsPage() {
 
   const [isStockModalOpen, setStockModalOpen] = useState(false);
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
+  const [isBatchesModalOpen, setBatchesModalOpen] = useState(false);
+  const [selectedProductForBatches, setSelectedProductForBatches] = useState(null);
+  const [isRestockModalOpen, setRestockModalOpen] = useState(false);
 
+  // Open stock modal
   const handleOpenStockModal = (product) => {
     setSelectedProductForStock(product);
     setStockModalOpen(true);
   };
+  // Close stock modal
   const handleCloseStockModal = () => {
     setStockModalOpen(false);
     setSelectedProductForStock(null);
+  };
+
+  // Open restock modal
+  const handleOpenRestockModal = () => {
+    setRestockModalOpen(true);
+  };
+  // Close restock modal
+  const handleCloseRestockModal = () => {
+    setRestockModalOpen(false);
+  };
+
+  // When "Add Stock" is requested from ProductStockModal
+  const handleAddStockFromStockModal = () => {
+    setStockModalOpen(false); // close stock modal
+    setRestockModalOpen(true); // open restock modal
+  };
+
+  const handleOpenBatchesModal = (product) => {
+    setSelectedProductForBatches(product);
+    setBatchesModalOpen(true);
+  };
+  const handleCloseBatchesModal = () => {
+    setBatchesModalOpen(false);
+    setSelectedProductForBatches(null);
   };
 
   const handleClose = () => {
@@ -316,25 +368,41 @@ export default function ProductsPage() {
           className: 'cell-center'
         }
       },
+      // {
+      //   header: 'Name',
+      //   accessorKey: 'product_name'
+      // },
       {
-        header: 'Name',
-        accessorKey: 'product_name'
+        header: 'Item Name',
+        accessorKey: 'product_name',
+        cell: ({ row, getValue }) => {
+          const date = new Date(row.original.added_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          return (
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Stack spacing={0}>
+                <Typography>
+                  {row.original.product_name} | {row.original.product_name_localized}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {row.original.sku} | {row.original.product_unit}
+                </Typography>
+              </Stack>
+            </Stack>
+          );
+        }
+      },
+      // {
+      //   header: 'Quantity',
+      //   accessorKey: 'quantity'
+      // },
+      {
+        header: 'Category',
+        accessorKey: 'category_name'
       },
 
       {
-        header: 'Quantity',
-        accessorKey: 'quantity'
-      },
-      {
-        header: 'Unit Price',
-        accessorKey: 'unit_price',
-        cell: ({ getValue }) => `ETB ${parseFloat(getValue()).toFixed(2)}`
-      },
-
-      {
-        header: 'Total Price',
-        accessorKey: 'total_price',
-        cell: ({ getValue }) => `ETB ${parseFloat(getValue()).toFixed(2)}`
+        header: 'Unit',
+        accessorKey: 'product_unit'
       },
 
       {
@@ -361,7 +429,15 @@ export default function ProductsPage() {
           </Stack>
         )
       },
-
+      {
+        header: 'Updated At',
+        accessorKey: 'updated_at',
+        cell: ({ row, getValue }) => (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography color="text.secondary">{new Date(row.original.updated_at).toLocaleDateString()}</Typography>
+          </Stack>
+        )
+      },
       {
         header: 'Actions',
         meta: {
@@ -369,14 +445,28 @@ export default function ProductsPage() {
         },
         disableSortBy: true,
         cell: ({ row }) => {
+          const [anchorEl, setAnchorEl] = useState(null);
+          const open = Boolean(anchorEl);
+
+          const handleMenuOpen = (event) => {
+            event.stopPropagation(); // prevent row click
+            setAnchorEl(event.currentTarget);
+          };
+
+          const handleMenuClose = () => {
+            setAnchorEl(null);
+          };
+
           const collapseIcon = row.getCanExpand() && row.getIsExpanded() ? <ArrowUp2 /> : <ArrowDown2 />;
           return (
             <Stack direction="row" alignItems="center" justifyContent="center" spacing={0}>
+              {/* Inline actions you want visible */}
               <Tooltip title="View More">
                 <IconButton color="secondary" onClick={row.getToggleExpandedHandler()}>
                   {collapseIcon}
                 </IconButton>
               </Tooltip>
+
               <Tooltip title="View Stock">
                 <IconButton
                   color="info"
@@ -385,33 +475,95 @@ export default function ProductsPage() {
                     handleOpenStockModal(row.original);
                   }}
                 >
-                  View Stock
+                  <Chart1 />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Edit">
+              <Tooltip title="View Batches">
                 <IconButton
-                  color="primary"
+                  color="info"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedProduct(row.original); // sets the selected product for editing
-                    setProductModalOpen(true); // opens the modal
+                    handleOpenBatchesModal(row.original);
                   }}
                 >
-                  <Edit />
+                  <TableDocument />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete">
-                <IconButton
-                  color="error"
+              {/* 3‑dot more button */}
+              <Tooltip title="More Actions">
+                <IconButton onClick={handleMenuOpen}>
+                  <More />
+                </IconButton>
+              </Tooltip>
+
+              <Menu
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleMenuClose}
+                onClick={(e) => e.stopPropagation()} // don’t trigger row
+              >
+                {' '}
+                <MenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleClose();
+                    handleMenuClose();
+                    handleOpenStockModal(row.original);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Chart1 />
+                  </ListItemIcon>
+                  <ListItemText primary="View Stock" />
+                </MenuItem>
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuClose();
+                    handleOpenBatchesModal(row.original);
+                  }}
+                >
+                  <ListItemIcon>
+                    <TableDocument />
+                  </ListItemIcon>
+                  <ListItemText primary="View Batches" />
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    handleViewDetails(row.original);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Information fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Details" />
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    setSelectedProduct(row.original);
+                    setProductModalOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <Edit fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Edit" />
+                </MenuItem>
+                <MenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuClose();
                     setProductDeleteId(Number(row.original.product_id));
+                    handleClose();
                   }}
                 >
-                  <Trash />
-                </IconButton>
-              </Tooltip>
+                  <ListItemIcon>
+                    <Trash fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Delete" />
+                </MenuItem>
+              </Menu>
             </Stack>
           );
         }
@@ -435,7 +587,6 @@ export default function ProductsPage() {
             }
           }}
         />
-
         <AlertProductDelete
           id={Number(ProductDeleteId)}
           company_id={user?.company_id}
@@ -451,7 +602,15 @@ export default function ProductsPage() {
           Product={selectedProduct}
           filters={filter}
         />
-        <ProductStockModal open={isStockModalOpen} onClose={handleCloseStockModal} product={selectedProductForStock} />
+        <ProductStockModal
+          open={isStockModalOpen}
+          onClose={handleCloseStockModal}
+          product={selectedProductForStock}
+          onAddStock={handleAddStockFromStockModal}
+          BusinessUnits={BusinessUnits}
+        />
+        <RestockProductModal open={isRestockModalOpen} onClose={handleCloseRestockModal} product={selectedProductForStock} />
+        <ProductBatchesModal open={isBatchesModalOpen} onClose={handleCloseBatchesModal} product={selectedProductForBatches} />
       </Grid>
     );
   } else {

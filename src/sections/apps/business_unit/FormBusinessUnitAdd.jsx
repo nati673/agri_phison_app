@@ -1,7 +1,5 @@
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-
-// material ui
 import {
   Box,
   Grid,
@@ -17,44 +15,35 @@ import {
   FormHelperText,
   FormControlLabel,
   Autocomplete,
-  Tooltip
+  Tooltip,
+  Select,
+  MenuItem
 } from '@mui/material';
-
 import { useTheme } from '@mui/material/styles';
-
-// date picker
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-
-// third party
 import _ from 'lodash';
 import * as Yup from 'yup';
 import { useFormik, Form, FormikProvider } from 'formik';
-
-// project imports
 import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
-
 import { openSnackbar } from 'api/snackbar';
 import { createBusinessUnit, updateBusinessUnit } from 'api/business_unit';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 import { useGetLocation } from 'api/location';
-
-// icons
 import { Trash } from 'iconsax-react';
 import useAuth from 'hooks/useAuth';
 import toast from 'react-hot-toast';
 
-// CONSTANT
 const getInitialValues = (BusinessUnit) => {
   const defaultValues = {
     unit_name: '',
     unit_code: '',
     description: '',
     location_ids: [],
-    is_active: true
+    is_active: true,
+    deduction_method: 'fifo' // default to FIFO for new business units
   };
-
   return BusinessUnit ? _.merge({}, defaultValues, BusinessUnit) : defaultValues;
 };
 
@@ -82,7 +71,8 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
     unit_code: Yup.string().max(100),
     description: Yup.string().max(1000),
     location_ids: Yup.array().min(1, 'At least one location is required'),
-    is_active: Yup.boolean()
+    is_active: Yup.boolean(),
+    deduction_method: Yup.string().required('Deduction method is required')
   });
 
   const [openAlert, setOpenAlert] = useState(false);
@@ -98,25 +88,18 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
     onSubmit: async (values, { setSubmitting }) => {
       try {
         if (BusinessUnit) {
-          const updateResult = await updateBusinessUnit(BusinessUnit.business_unit_id, { ...values, company_id: company_id });
-
+          const updateResult = await updateBusinessUnit(BusinessUnit.business_unit_id, { ...values, company_id });
           if (updateResult.success) {
             toast.success(updateResult.message);
-
             setTimeout(() => {
               closeModal();
               setSubmitting(false);
             }, 2000);
           }
         } else {
-          const createResult = await createBusinessUnit({
-            ...values,
-            company_id
-          });
-
+          const createResult = await createBusinessUnit({ ...values, company_id });
           if (createResult.success) {
             toast.success(createResult.message);
-
             setTimeout(() => {
               closeModal();
               setSubmitting(false);
@@ -180,6 +163,31 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
                   </Grid>
                   <Grid item xs={12}>
                     <Stack spacing={1}>
+                      <InputLabel htmlFor="deduction_method">Inventory Deduction Method</InputLabel>
+                      <Select
+                        fullWidth
+                        id="deduction_method"
+                        value={values.deduction_method}
+                        onChange={(e) => setFieldValue('deduction_method', e.target.value)}
+                        error={Boolean(touched.deduction_method && errors.deduction_method)}
+                        displayEmpty
+                      >
+                        <MenuItem value="fifo">FIFO (First-In, First-Out)</MenuItem>
+                        <MenuItem value="lifo">LIFO (Last-In, First-Out)</MenuItem>
+                      </Select>
+                      <FormHelperText>
+                        This will determine how inventory is deducted in your business unit. This cannot be changed once stock entries are
+                        made.
+                      </FormHelperText>
+                      {touched.deduction_method && errors.deduction_method && (
+                        <FormHelperText error sx={{ pl: 1.75 }}>
+                          {errors.deduction_method}
+                        </FormHelperText>
+                      )}
+                    </Stack>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Stack spacing={1}>
                       <InputLabel htmlFor="location_ids">Locations</InputLabel>
                       <Autocomplete
                         multiple
@@ -187,7 +195,7 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
                         options={locations || []}
                         getOptionLabel={(option) =>
                           option?.location_name
-                            ? `${option.location_name} (${option.location_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())})`
+                            ? `${option.location_name} (${option.location_type.replace(/\_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())})`
                             : ''
                         }
                         value={locations?.filter((loc) => values.location_ids.includes(loc.location_id)) || []}
@@ -208,7 +216,7 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <Stack spacing={1}>
-                      <InputLabel htmlFor="unit_code">Description (Optional)</InputLabel>
+                      <InputLabel htmlFor="description">Description (Optional)</InputLabel>
                       <TextField
                         fullWidth
                         id="description"
@@ -219,7 +227,6 @@ export default function FormBusinessUnitAdd({ BusinessUnit, closeModal }) {
                       />
                     </Stack>
                   </Grid>
-
                   <Grid item xs={12}>
                     <Stack spacing={1}>
                       <InputLabel htmlFor="is_active">Unit Status</InputLabel>

@@ -1,6 +1,6 @@
 import useAuth from 'hooks/useAuth';
-import { useMemo } from 'react';
-import useSWR from 'swr';
+import { useCallback, useMemo } from 'react';
+import useSWR, { mutate } from 'swr';
 import axios, { fetcher } from 'utils/axios';
 
 export async function loader() {
@@ -17,10 +17,18 @@ export async function filterProducts(companyId, filter) {
     return [];
   }
 }
+
+export async function RestockProductForLocation(productId, formattedPayload) {
+  const { data } = await axios.post(`/product/stock-product/${productId}`, formattedPayload);
+
+  return data;
+}
+
 export function useGetProducts() {
   const { user } = useAuth();
   const companyId = user?.company_id;
-  const { data, isLoading, error, isValidating } = useSWR(`/products/${companyId}`, fetcher, {
+  const endpoint = `/products/${companyId}`;
+  const { data, isLoading, error, isValidating } = useSWR(endpoint, fetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false
@@ -37,7 +45,13 @@ export function useGetProducts() {
     [data, error, isLoading, isValidating]
   );
 
-  return memoizedValue;
+  const refetch = useCallback(() => {
+    if (endpoint) mutate(endpoint);
+  }, [endpoint, mutate]);
+  return {
+    ...memoizedValue,
+    refetch
+  };
 }
 
 export async function fetchProductBatches(productId, businessUnitId = null, locationId = null) {
@@ -89,9 +103,15 @@ export function useGetProductStock(productId) {
     }),
     [data, error, isLoading, isValidating]
   );
-
-  return memoizedValue;
+  const refetch = useCallback(() => {
+    if (endpoint) mutate(endpoint);
+  }, [endpoint, mutate]);
+  return {
+    ...memoizedValue,
+    refetch
+  };
 }
+
 export function useGetSmallQuantityProducts() {
   const { user } = useAuth();
   const companyId = user?.company_id;
@@ -115,6 +135,7 @@ export function useGetSmallQuantityProducts() {
 
   return memoizedValue;
 }
+
 export function useGetOverStockedProducts() {
   const { user } = useAuth();
   const companyId = user?.company_id;
@@ -218,8 +239,11 @@ export async function getRelatedProducts(id) {
 }
 export async function updateProduct(companyId, formattedPayload) {
   const { data } = await axios.put(`/product/${companyId}`, formattedPayload);
+  return data;
+}
 
-  // await filterProducts(companyId, filters);
+export async function updateProductBatch(batchId, formattedPayload) {
+  const { data } = await axios.put(`/product/batch/${batchId}`, formattedPayload);
 
   return data;
 }
@@ -227,4 +251,15 @@ export async function deleteProduct(productId) {
   const { data } = await axios.delete(`/product/${productId}`);
 
   return data;
+}
+
+export async function previewBatchDeduction(payload) {
+  try {
+    // payload: { company_id, product_id, business_unit_id, location_id, quantity }
+    const { data } = await axios.post('/products/batch-for-deduction/preview', payload);
+    return data;
+  } catch (error) {
+    console.error('preview API error:', error);
+    throw error;
+  }
 }

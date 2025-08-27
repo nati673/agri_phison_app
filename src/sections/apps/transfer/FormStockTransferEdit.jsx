@@ -13,13 +13,14 @@ import {
   Stack,
   IconButton,
   CircularProgress,
-  Fade
+  Fade,
+  Tooltip
 } from '@mui/material';
-import { Add, Trash } from 'iconsax-react';
+import { Add, InfoCircle, Trash } from 'iconsax-react';
 import toast from 'react-hot-toast';
 import { useGetBusinessUnit } from 'api/business_unit';
 import { useGetLocation } from 'api/location';
-import { useGetProducts } from 'api/products';
+import { useGetProducts, previewBatchDeduction } from 'api/products';
 import { useGetUserByFilter, useGetUserInfo } from 'api/users';
 import { renderLocationOption } from 'components/inputs/renderLocationOption';
 import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOption';
@@ -33,18 +34,27 @@ const initialEntry = { product: null, quantity: '' };
 export default function StockTransferEditForm({ transfer, closeModal, actionDone }) {
   const { userInfo: user } = useGetUserInfo();
   const theme = useTheme();
-  console.log(transfer);
-  // Load initial transfer data for edit (runs ONCE)
+  const { BusinessUnits } = useGetBusinessUnit();
+  const { locations } = useGetLocation();
+  const { products } = useGetProducts();
+
+  // Preload entries with items in transfer
   const [entries, setEntries] = useState(() => {
     if (transfer?.items?.length) {
       return transfer.items.map((item) => ({
+        item_id: item.item_id,
         product: item,
-        quantity: item.quantity ? String(item.quantity) : ''
+        quantity: item.quantity ? String(item.quantity) : '',
+        isExisting: true
       }));
     }
     return [{ ...initialEntry }];
   });
 
+  // Track if a row is new (for preview API) or is from the transfer (for static values)
+  const [previewResults, setPreviewResults] = useState({});
+
+  // Header info - only allow editing for to_location, reason, notes
   const [transferInfo, setTransferInfo] = useState({
     from_business_unit: null,
     from_location: null,
@@ -57,10 +67,6 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
   });
 
   const [loading, setLoading] = useState(false);
-
-  const { BusinessUnits } = useGetBusinessUnit();
-  const { locations } = useGetLocation();
-  const { products } = useGetProducts();
 
   const { userInfo: receiverUser, userInfoLoading: receiverLoading } = useGetUserByFilter(
     transferInfo.to_business_unit?.business_unit_id,
@@ -81,27 +87,24 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
     [transferInfo.to_business_unit, locations]
   );
 
-  // Totals summary
-  const totals = useMemo(() => {
-    let totalQty = 0,
-      totalProd = 0;
-    entries.forEach((e) => {
-      if (e.product && Number(e.quantity) > 0) {
-        totalProd++;
-        totalQty += Number(e.quantity);
-      }
-    });
-    return { totalProd, totalQty };
-  }, [entries]);
+  // Totals include both existing (from transfer.items) and new lines
+  const totalItems = entries.filter((e) => e.product && Number(e.quantity) > 0).length;
+  const totalQuantity = entries.reduce((acc, e) => acc + (Number(e.quantity) || 0), 0);
+  const grandTotal = entries.reduce((sum, entry, idx) => {
+    if (entry.isExisting) {
+      return sum + (entry.product.selling_price || 0) * (Number(entry.quantity) || 0);
+    }
+    return sum + (previewResults[idx]?.grand_total || 0);
+  }, 0);
 
-  // Sync sender with logged-in user
+  // Sync sender (read-only)
   useEffect(() => {
     if (user && user.user_id) {
       setTransferInfo((prev) => ({ ...prev, sender: user }));
     }
   }, [user]);
 
-  // Auto-populate receiver
+  // Receiver auto-selection as before
   useEffect(() => {
     if (transferInfo.to_business_unit && transferInfo.to_location && receiverUser && !receiverLoading) {
       setTransferInfo((prev) => ({ ...prev, receiver: receiverUser }));
@@ -110,24 +113,67 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
     }
   }, [transferInfo.to_business_unit, transferInfo.to_location, receiverUser, receiverLoading]);
 
-  // Handle field changes
-  const handleTransferInfoChange = (field, value) => {
-    setTransferInfo((prev) => ({
-      ...prev,
-      [field]: value,
-      ...(field === 'from_business_unit' ? { from_location: null } : {}),
-      ...(field === 'to_business_unit' ? { to_location: null } : {})
-    }));
+  // On transfer data arrival, set header info
+  useEffect(() => {
+    if (transfer && BusinessUnits && locations) {
+      setTransferInfo((prev) => ({
+        ...prev,
+        from_business_unit: BusinessUnits.find((bu) => bu.business_unit_id === transfer.business_unit_id) || null,
+        from_location: locations.find((loc) => loc.location_id === transfer.from_location_id) || null,
+        to_business_unit:
+          BusinessUnits.find((bu) => bu.business_unit_id === (transfer.to_business_unit_id ?? transfer.business_unit_id)) || null,
+        to_location: locations.find((loc) => loc.location_id === transfer.to_location_id) || null,
+        sender: user || null,
+        transfer_reason: transfer.transfer_reason || '',
+        notes: transfer.notes || ''
+      }));
+    }
+  }, [transfer, BusinessUnits, locations, user]);
+
+  // API preview for new lines only
+  const handlePreview = async (entry, idx) => {
+    if (entries[idx]?.isExisting) return; // skip preview for existing items
+    const productId = entry.product?.product_id;
+    const quantity = Number(entry.quantity) || 0;
+    const businessUnitId = transferInfo.from_business_unit?.business_unit_id;
+    const locationId = transferInfo.from_location?.location_id;
+    const companyId = user?.company_id || null;
+
+    if (!productId || !quantity || !businessUnitId || !locationId || quantity <= 0) {
+      setPreviewResults((prev) => ({ ...prev, [idx]: null }));
+      return;
+    }
+    try {
+      const preview = await previewBatchDeduction({
+        company_id: companyId,
+        product_id: productId,
+        business_unit_id: businessUnitId,
+        location_id: locationId,
+        quantity
+      });
+      setPreviewResults((prev) => ({ ...prev, [idx]: preview }));
+    } catch (err) {
+      setPreviewResults((prev) => ({ ...prev, [idx]: null }));
+    }
   };
 
-  // Product and quantity handlers
   const handleChange = (idx, field, value) => {
     setEntries((prev) => prev.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry)));
+    // Preview only for newly added (non-existing) rows
+    if (!entries[idx]?.isExisting && (field === 'product' || field === 'quantity') && value) {
+      const updatedEntry = {
+        ...entries[idx],
+        [field]: value
+      };
+      handlePreview(updatedEntry, idx);
+    }
   };
-  const handleAdd = () => setEntries([...entries, { ...initialEntry }]);
+
+  // Adding/removing lines
+  const handleAdd = () => setEntries([...entries, { ...initialEntry, isExisting: false }]);
   const handleRemove = (idx) => setEntries(entries.filter((_, i) => i !== idx));
 
-  // Modern Update Handler for Edit
+  // Save/update handler - only passes changed fields
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!transferInfo.from_business_unit) return toast.error('Pick the source Business Unit');
@@ -142,7 +188,7 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
 
     setLoading(true);
     try {
-      // Construct payload for update
+      // Payload for update
       const header = {
         transfer_id: Number(transfer.transfer_id),
         business_unit_id: transferInfo.from_business_unit.business_unit_id,
@@ -151,13 +197,16 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
         to_location_id: transferInfo.to_location.location_id,
         transferred_by: transferInfo.sender.user_id,
         received_by: transferInfo.receiver.user_id,
+        assigned_to: transferInfo.receiver.user_id,
         transfer_reason: transferInfo.transfer_reason,
         notes: transferInfo.notes,
         company_id: user?.company_id
       };
       const items = entries.map((entry) => ({
         product_id: entry.product.product_id,
-        quantity: Number(entry.quantity)
+        quantity: Number(entry.quantity),
+        item_id: entry.item_id
+        // Optionally batch_id, price, etc if your backend requires them
       }));
       const response = await UpdateTransfer(transfer.transfer_id, { header, items });
       if (response.success) {
@@ -177,21 +226,14 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
     }
     setLoading(false);
   };
-  useEffect(() => {
-    if (transfer && BusinessUnits && locations) {
-      setTransferInfo((prev) => ({
-        ...prev,
-        from_business_unit: BusinessUnits.find((bu) => bu.business_unit_id === transfer.business_unit_id) || null,
-        from_location: locations.find((loc) => loc.location_id === transfer.from_location_id) || null,
-        to_business_unit:
-          BusinessUnits.find((bu) => bu.business_unit_id === (transfer.to_business_unit_id ?? transfer.business_unit_id)) || null,
-        to_location: locations.find((loc) => loc.location_id === transfer.to_location_id) || null,
-        sender: user || null,
-        transfer_reason: transfer.transfer_reason || '',
-        notes: transfer.notes || ''
-      }));
-    }
-  }, [transfer, BusinessUnits, locations, user]);
+  const handleTransferInfoChange = (field, value) => {
+    setTransferInfo((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'from_business_unit' ? { from_location: null } : {}),
+      ...(field === 'to_business_unit' ? { to_location: null } : {})
+    }));
+  };
 
   return (
     <Box>
@@ -217,10 +259,11 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       options={BusinessUnits || []}
                       getOptionLabel={(opt) => opt.unit_name || ''}
                       value={transferInfo.from_business_unit}
-                      onChange={(_, v) => handleTransferInfoChange('from_business_unit', v)}
                       renderOption={renderBusinessUnitOption}
                       isOptionEqualToValue={(o, v) => o.business_unit_id === v.business_unit_id}
                       renderInput={(params) => <TextField {...params} label="Business Unit" size="small" required />}
+                      readOnly
+                      disabled
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -228,11 +271,11 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       options={fromLocationOptions}
                       getOptionLabel={(opt) => opt.location_name || ''}
                       value={transferInfo.from_location}
-                      onChange={(_, v) => handleTransferInfoChange('from_location', v)}
                       renderOption={renderLocationOption}
                       isOptionEqualToValue={(o, v) => o.location_id === v.location_id}
-                      disabled={!transferInfo.from_business_unit}
                       renderInput={(params) => <TextField {...params} label="Location" size="small" required />}
+                      readOnly
+                      disabled
                     />
                   </Grid>
                   <Grid item xs={12}>
@@ -290,8 +333,8 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       onChange={(_, v) => handleTransferInfoChange('to_location', v)}
                       renderOption={renderLocationOption}
                       isOptionEqualToValue={(o, v) => o.location_id === v.location_id}
-                      disabled={!transferInfo.to_business_unit}
                       renderInput={(params) => <TextField {...params} label="Location" size="small" required />}
+                      disabled={!transferInfo.to_business_unit}
                     />
                   </Grid>
                   <Grid item xs={12}>
@@ -329,6 +372,7 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                 </Grid>
               </Box>
             </Grid>
+
             <Grid item xs={12} md={6}>
               <Box sx={{ borderRadius: 2, mb: 2 }}>
                 <TextField
@@ -364,17 +408,96 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
           </Grid>
         </MainCard>
 
-        {/* Product entries */}
+        {/* Product Entries */}
         {entries.map((entry, idx) => {
           const selectedProductIds = entries
             .filter((_, i) => i !== idx)
             .map((e) => e.product?.product_id)
             .filter(Boolean);
+          const preview = previewResults[idx];
+          // If it is an existing transfer item, show static data
+          if (entry.isExisting) {
+            return (
+              <Card key={idx} variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+                <CardContent>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={3}>
+                      <ProductSelector
+                        products={products}
+                        businessUnitId={transferInfo.from_business_unit?.business_unit_id}
+                        locationId={transferInfo.from_location?.location_id}
+                        selectedProductIds={selectedProductIds}
+                        value={entry.product}
+                        onChange={(newVal) => handleChange(idx, 'product', newVal)}
+                        disabled // prevent changing product for existing entry
+                      />
+                    </Grid>
+                    <Grid item xs={6} sm={2}>
+                      <TextField
+                        label="Transfer Quantity"
+                        type="number"
+                        inputProps={{ min: 0 }}
+                        value={entry.quantity}
+                        onChange={(e) => handleChange(idx, 'quantity', e.target.value)}
+                        required
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6} sm={2}>
+                      <TextField
+                        label="Available"
+                        value={entry.isExisting ? entry.product.available_quantity : entry.product.quantity || '-'}
+                        InputProps={{
+                          readOnly: true,
+                          style: { fontWeight: 700 }
+                        }}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6} sm={2}>
+                      <TextField
+                        label="Unit Price"
+                        value={entry.product.selling_price || ''}
+                        InputProps={{ readOnly: true }}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6} sm={1.5}>
+                      <TextField
+                        label="Total"
+                        value={(entry.product.selling_price || 0) * (Number(entry.quantity) || 0)}
+                        InputProps={{
+                          readOnly: true,
+                          style: { fontWeight: 700 }
+                        }}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6} sm="auto">
+                      <IconButton color="error" onClick={() => handleRemove(idx)} disabled={entries.length === 1} aria-label="Remove Entry">
+                        <Trash />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            );
+          }
+          // For new row, show preview data
           return (
-            <Card key={idx} variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+            <Card
+              key={idx}
+              variant="outlined"
+              sx={{
+                mb: 2,
+                borderRadius: 2,
+                borderColor: preview && preview.enough_stock === false ? 'red' : '',
+                borderWidth: preview && preview.enough_stock === false ? 2 : 1
+              }}
+            >
               <CardContent>
                 <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} sm={5}>
+                  <Grid item xs={12} sm={3}>
                     <ProductSelector
                       products={products}
                       businessUnitId={transferInfo.from_business_unit?.business_unit_id}
@@ -385,7 +508,7 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       disabled={!transferInfo.from_location?.location_id || !transferInfo.from_business_unit?.business_unit_id}
                     />
                   </Grid>
-                  <Grid item xs={5} sm={3}>
+                  <Grid item xs={6} sm={2}>
                     <TextField
                       label="Transfer Quantity"
                       type="number"
@@ -396,10 +519,10 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={7} sm={3}>
+                  <Grid item xs={6} sm={2}>
                     <TextField
-                      label="Available Quantity"
-                      value={entry.product?.available_quantity ?? entry.product?.quantity ?? '-'}
+                      label="Available"
+                      value={preview ? preview.available : '-'}
                       InputProps={{
                         readOnly: true,
                         style: { fontWeight: 700 }
@@ -407,10 +530,72 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm="auto">
+                  <Grid item xs={6} sm={2}>
+                    <TextField
+                      label="Unit Price"
+                      value={
+                        preview && preview.batches && preview.batches.length === 1
+                          ? preview.batches[0].unit_price
+                          : preview && preview.batches && preview.batches.length > 1
+                            ? 'Mixed'
+                            : ''
+                      }
+                      InputProps={{ readOnly: true }}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={6} sm={1.5}>
+                    <TextField
+                      label="Total"
+                      value={preview ? preview.grand_total : '-'}
+                      InputProps={{
+                        readOnly: true,
+                        style: { fontWeight: 700 }
+                      }}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={6} sm="auto">
                     <IconButton color="error" onClick={() => handleRemove(idx)} disabled={entries.length === 1} aria-label="Remove Entry">
                       <Trash />
                     </IconButton>
+                    {preview && (
+                      <Tooltip
+                        arrow
+                        placement="top"
+                        title={
+                          <Box sx={{ p: 1.5, bgcolor: '#76CA2E' }}>
+                            <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                              FIFO / LIFO Batch Allocation
+                            </Typography>
+                            {preview.batches.map((batch) => (
+                              <Box key={batch.batch_id} display="flex" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                                <Typography variant="body2">
+                                  #{batch.batch_code} ({batch.quantity} × {batch.unit_price})
+                                </Typography>
+                                <Typography variant="body2" fontWeight={900}>
+                                  {batch.subtotal}
+                                </Typography>
+                              </Box>
+                            ))}
+                            <Divider sx={{ my: 1 }} />
+                            <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Transfer Total:</span>
+                              <span>{preview.grand_total}</span>
+                            </Typography>
+                            {!preview.enough_stock && (
+                              <Typography variant="body2" color="error.main" sx={{ mt: 1 }}>
+                                ⚠ Not enough stock to fully fulfill this transfer!
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      >
+                        <IconButton>
+                          <InfoCircle />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Grid>
                 </Grid>
               </CardContent>
@@ -426,6 +611,7 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
             {loading ? <CircularProgress size={24} /> : 'Update'}
           </Button>
         </Box>
+
         {/* Modern summary card */}
         <MainCard
           boxShadow={false}
@@ -442,23 +628,33 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
             background: '#F6F8FC'
           }}
         >
-          {/* <Box display="flex" justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              Total Products
+          <Box display="flex" justifyContent="space-between">
+            <Typography variant="body2" color="primary.secondary">
+              Total Items
             </Typography>
             <Typography variant="body2" fontWeight={600}>
-              {totals.totalProd}
+              {totalItems}
             </Typography>
           </Box>
           <Box display="flex" justifyContent="space-between">
-            <Typography variant="body2" color="primary.main">
+            <Typography variant="body2" color="primary.secondary">
               Total Quantity
             </Typography>
             <Typography variant="body2" fontWeight={700}>
-              {totals.totalQty}
+              {totalQuantity}
             </Typography>
-          </Box> */}
-          {/* <Divider sx={{ my: 1.5 }} /> */}
+          </Box>
+          <Divider sx={{ my: 1.5 }} />
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700}>
+              Grand Total
+            </Typography>
+            <Typography variant="h6" fontWeight={700} color="primary.main">
+              ETB {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </Typography>
+          </Box>
+          <Divider sx={{ my: 1.5 }} />
+          {/* Receiver info */}
           <Box display="flex" gap={2} alignItems="center">
             <Typography variant="h6" fontWeight={700} color="success.main">
               Receiver:

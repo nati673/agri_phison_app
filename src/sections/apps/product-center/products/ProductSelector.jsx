@@ -10,9 +10,9 @@ export default function ProductSelector({
   selectedProductIds = [],
   value,
   onChange,
-  disabled = false
+  disabled = false,
+  price
 }) {
-  // Filter products only when inputs change
   const filteredProducts = useMemo(() => {
     return (products || [])
       .filter(
@@ -32,7 +32,7 @@ export default function ProductSelector({
       getOptionLabel={(opt) => opt.product_name || ''}
       value={value}
       onChange={(e, newVal) => onChange(newVal)}
-      renderOption={renderProductOption}
+      renderOption={(props, option, state) => renderProductOption(props, option, state, price)}
       renderInput={(params) => <TextField {...params} label="Product" size="small" required />}
       isOptionEqualToValue={(o, v) => o.product_id === v.product_id}
       disabled={disabled}

@@ -209,7 +209,6 @@ export default function FormPurchase({ purchase = null, closeModal, actionDone }
                 isOptionEqualToValue={(o, v) => o.business_unit_id === v.business_unit_id}
                 renderInput={(params) => <TextField {...params} label="Business Unit" size="small" required />}
                 disabled
-                
               />
             </Grid>
             <Grid item xs={12} sm={3}>

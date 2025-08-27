@@ -16,3 +16,13 @@ html[dir='rtl'] .apexcharts-tooltip .apexcharts-tooltip-marker {
   margin-left: 10px;
   margin-right: 0px;
 }
+/* styles.css */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}

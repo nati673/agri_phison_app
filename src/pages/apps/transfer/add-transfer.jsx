@@ -13,13 +13,14 @@ import {
   Stack,
   IconButton,
   CircularProgress,
-  Fade
+  Fade,
+  Tooltip
 } from '@mui/material';
-import { Add, Trash } from 'iconsax-react';
+import { Add, InfoCircle, Trash } from 'iconsax-react';
 import toast from 'react-hot-toast';
 import { useGetBusinessUnit } from 'api/business_unit';
 import { useGetLocation } from 'api/location';
-import { useGetProducts } from 'api/products';
+import { previewBatchDeduction, useGetProducts } from 'api/products';
 import { useGetUserByFilter, useGetUserInfo } from 'api/users';
 import { renderProductOption } from 'components/inputs/renderProductOption';
 import { renderLocationOption } from 'components/inputs/renderLocationOption';
@@ -28,6 +29,7 @@ import MainCard from 'components/MainCard';
 import ProductSelector from 'sections/apps/product-center/products/ProductSelector';
 import { AddNewTransfer } from 'api/transfer';
 import { useTheme } from '@mui/material/styles';
+import useAuth from 'hooks/useAuth';
 
 const initialEntry = { product: null, quantity: '' };
 
@@ -47,10 +49,12 @@ export default function StockTransferForm() {
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [previewResults, setPreviewResults] = useState({});
 
   const { BusinessUnits } = useGetBusinessUnit();
   const { locations } = useGetLocation();
   const { products } = useGetProducts();
+  const { user: localUser } = useAuth();
 
   // Query for receiver user (auto from selected BU/Location)
   const {
@@ -73,6 +77,34 @@ export default function StockTransferForm() {
     () => locationFilter(transferInfo.to_business_unit, locations),
     [transferInfo.to_business_unit, locations]
   );
+  const handlePreview = async (entry, idx) => {
+    const productId = entry.product?.product_id;
+    const quantity = Number(entry.quantity) || 0;
+    const businessUnitId = transferInfo.from_business_unit?.business_unit_id;
+    const locationId = transferInfo.from_location?.location_id;
+    const companyId = entry.product?.company_id || null;
+
+    if (!productId || !quantity || !businessUnitId || !locationId || quantity <= 0) {
+      setPreviewResults((prev) => ({ ...prev, [idx]: null }));
+      // Also clear price
+      setEntries((prev) => prev.map((it, i) => (i === idx ? { ...it, price: '' } : it)));
+      return;
+    }
+
+    try {
+      const preview = await previewBatchDeduction({
+        company_id: localUser?.company_id,
+        product_id: productId,
+        business_unit_id: businessUnitId,
+        location_id: locationId,
+        quantity
+      });
+      setPreviewResults((prev) => ({ ...prev, [idx]: preview }));
+    } catch (err) {
+      setPreviewResults((prev) => ({ ...prev, [idx]: null }));
+      setEntries((prev) => prev.map((it, i) => (i === idx ? { ...it, price: '' } : it)));
+    }
+  };
 
   // Summary totals
   const totals = useMemo(() => {
@@ -115,6 +147,13 @@ export default function StockTransferForm() {
   // Product and quantity handlers
   const handleChange = (idx, field, value) => {
     setEntries((prev) => prev.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry)));
+    if ((field === 'product' || field === 'quantity') && value) {
+      const updatedEntry = {
+        ...entries[idx],
+        [field]: value
+      };
+      handlePreview(updatedEntry, idx);
+    }
   };
   const handleAdd = () => setEntries([...entries, { ...initialEntry }]);
   const handleRemove = (idx) => setEntries(entries.filter((_, i) => i !== idx));
@@ -176,7 +215,14 @@ export default function StockTransferForm() {
     }
     setLoading(false);
   };
+  // Total products (distinct lines with quantity > 0)
+  const totalItems = entries.filter((e) => e.product && Number(e.quantity) > 0).length;
 
+  // Total quantity (sum of all transfer quantities)
+  const totalQuantity = entries.reduce((acc, e) => acc + (Number(e.quantity) || 0), 0);
+
+  // Grand total (sum of grand_total from preview results)
+  const grandTotal = entries.reduce((sum, _, idx) => sum + (previewResults[idx]?.grand_total || 0), 0);
   return (
     <Box>
       <form autoComplete="off" onSubmit={handleSubmit}>
@@ -356,11 +402,22 @@ export default function StockTransferForm() {
             .filter((_, i) => i !== idx)
             .map((e) => e.product?.product_id)
             .filter(Boolean);
+          const preview = previewResults[idx];
+
           return (
-            <Card key={idx} variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+            <Card
+              key={idx}
+              variant="outlined"
+              sx={{
+                mb: 2,
+                borderRadius: 2,
+                borderColor: preview && preview.enough_stock === false ? 'red' : '',
+                borderWidth: preview && preview.enough_stock === false ? 2 : 1
+              }}
+            >
               <CardContent>
                 <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} sm={5}>
+                  <Grid item xs={6} sm={3}>
                     <ProductSelector
                       products={products}
                       businessUnitId={transferInfo.from_business_unit?.business_unit_id}
@@ -371,7 +428,7 @@ export default function StockTransferForm() {
                       disabled={!transferInfo.from_location?.location_id || !transferInfo.from_business_unit?.business_unit_id}
                     />
                   </Grid>
-                  <Grid item xs={5} sm={3}>
+                  <Grid item xs={6} sm={2}>
                     <TextField
                       label="Transfer Quantity"
                       type="number"
@@ -382,10 +439,10 @@ export default function StockTransferForm() {
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={7} sm={3}>
+                  <Grid item xs={6} sm={2}>
                     <TextField
-                      label="Available Quantity"
-                      value={entry.product?.quantity ?? '-'}
+                      label="Available"
+                      value={preview ? preview.available : '-'}
                       InputProps={{
                         readOnly: true,
                         style: { fontWeight: 700 }
@@ -393,10 +450,73 @@ export default function StockTransferForm() {
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} sm="auto">
+                  <Grid item xs={6} sm={2}>
+                    <TextField
+                      label="Unit Price"
+                      value={
+                        preview && preview.batches && preview.batches.length === 1
+                          ? preview.batches[0].unit_price
+                          : preview && preview.batches && preview.batches.length > 1
+                            ? 'Mixed'
+                            : ''
+                      }
+                      InputProps={{ readOnly: true }}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={6} sm={1.5}>
+                    <TextField
+                      label="Total"
+                      value={preview ? preview.grand_total : '-'}
+                      InputProps={{
+                        readOnly: true,
+                        style: { fontWeight: 700 }
+                      }}
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={6} sm="auto">
                     <IconButton color="error" onClick={() => handleRemove(idx)} disabled={entries.length === 1} aria-label="Remove Entry">
                       <Trash />
                     </IconButton>
+
+                    {preview && (
+                      <Tooltip
+                        arrow
+                        placement="top"
+                        title={
+                          <Box sx={{ p: 1.5, bgcolor: '#76CA2E' }}>
+                            <Typography variant="subtitle2" gutterBottom fontWeight={600}>
+                              FIFO / LIFO Batch Allocation
+                            </Typography>
+                            {preview.batches.map((batch) => (
+                              <Box key={batch.batch_id} display="flex" justifyContent="space-between" sx={{ mb: 0.5 }}>
+                                <Typography variant="body2">
+                                  #{batch.batch_code} ({batch.quantity} × {batch.unit_price})
+                                </Typography>
+                                <Typography variant="body2" fontWeight={900}>
+                                  {batch.subtotal}
+                                </Typography>
+                              </Box>
+                            ))}
+                            <Divider sx={{ my: 1 }} />
+                            <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Transfer Total:</span>
+                              <span>{preview.grand_total}</span>
+                            </Typography>
+                            {!preview.enough_stock && (
+                              <Typography variant="body2" color="error.main" sx={{ mt: 1 }}>
+                                ⚠ Not enough stock to fully fulfill this transfer!
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      >
+                        <IconButton>
+                          <InfoCircle />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Grid>
                 </Grid>
               </CardContent>
@@ -413,7 +533,6 @@ export default function StockTransferForm() {
           </Button>
         </Box>
 
-        {/* Modern summary card */}
         <MainCard
           boxShadow={false}
           sx={{
@@ -429,23 +548,36 @@ export default function StockTransferForm() {
             background: '#F6F8FC'
           }}
         >
-          {/* <Box display="flex" justifyContent="space-between">
-            <Typography variant="body2" color="text.secondary">
-              Total Products
+          <Box display="flex" justifyContent="space-between">
+            <Typography variant="body2" color="primary.secondary">
+              Total Items
             </Typography>
             <Typography variant="body2" fontWeight={600}>
-              {totals.totalProd}
+              {totalItems}
             </Typography>
           </Box>
+
           <Box display="flex" justifyContent="space-between">
-            <Typography variant="body2" color="primary.main">
+            <Typography variant="body2" color="primary.secondary">
               Total Quantity
             </Typography>
             <Typography variant="body2" fontWeight={700}>
-              {totals.totalQty}
+              {totalQuantity}
             </Typography>
-          </Box> */}
-          {/* <Divider sx={{ my: 1.5 }} /> */}
+          </Box>
+          <Divider sx={{ my: 1.5 }} />
+
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight={700}>
+              Grand Total
+            </Typography>
+            <Typography variant="h6" fontWeight={700} color="primary.main">
+              ETB {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </Typography>
+          </Box>
+          <Divider sx={{ my: 1.5 }} />
+
+          {/** Receiver info (unchanged) */}
           <Box display="flex" gap={2} alignItems="center">
             <Typography variant="h6" fontWeight={700} color="success.main">
               Receiver:

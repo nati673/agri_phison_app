@@ -231,8 +231,8 @@ export default function EditProductForm({ product, closeModal, actionDone }) {
             <InputLabel sx={{ mt: 2 }}>Product Volume</InputLabel>
             <TextField type="number" fullWidth value={form.product_volume} onChange={handleChange('product_volume')} sx={inputStyle} />
 
-            <InputLabel sx={{ mt: 2 }}>Unit Price (ETB)</InputLabel>
-            <TextField type="number" fullWidth value={form.unit_price} onChange={handleChange('unit_price')} sx={requiredInputStyle} />
+            {/* <InputLabel sx={{ mt: 2 }}>Unit Price (ETB)</InputLabel>
+            <TextField type="number" fullWidth value={form.unit_price} onChange={handleChange('unit_price')} sx={requiredInputStyle} /> */}
 
             <InputLabel sx={{ mt: 2 }}>Category</InputLabel>
             <Autocomplete
@@ -264,7 +264,7 @@ export default function EditProductForm({ product, closeModal, actionDone }) {
               sx={requiredInputStyle}
             />
 
-            <InputLabel sx={{ mt: 2 }}>Location</InputLabel>
+            {/* <InputLabel sx={{ mt: 2 }}>Location</InputLabel>
             <Autocomplete
               options={(locations || []).filter((l) => l.location_type !== 'branch')}
               getOptionLabel={(opt) => `${opt.location_name} (${opt.location_type})`}
@@ -272,14 +272,14 @@ export default function EditProductForm({ product, closeModal, actionDone }) {
               onChange={(e, val) => setForm({ ...form, location_id: val?.location_id || '' })}
               renderInput={(params) => <TextField {...params} fullWidth />}
               sx={requiredInputStyle}
-            />
+            /> */}
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <InputLabel>Quantity</InputLabel>
-            <TextField type="number" fullWidth value={form.quantity} onChange={handleChange('quantity')} sx={requiredInputStyle} />
+            {/* <InputLabel>Quantity</InputLabel>
+            <TextField type="number" fullWidth value={form.quantity} onChange={handleChange('quantity')} sx={requiredInputStyle} /> */}
 
-            <InputLabel sx={{ mt: 2 }}>Expires At</InputLabel>
+            {/* <InputLabel sx={{ mt: 2 }}>Expires At</InputLabel>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 value={form.expires_at ? new Date(form.expires_at) : null}
@@ -287,13 +287,13 @@ export default function EditProductForm({ product, closeModal, actionDone }) {
                 format="yyyy-MM-dd"
                 slotProps={{ textField: { fullWidth: true } }}
               />
-            </LocalizationProvider>
+            </LocalizationProvider> */}
 
-            <InputLabel sx={{ mt: 2 }}>Min Quantity</InputLabel>
+            {/* <InputLabel sx={{ mt: 2 }}>Min Quantity</InputLabel>
             <TextField type="number" fullWidth value={form.min_quantity} onChange={handleChange('min_quantity')} sx={requiredInputStyle} />
 
             <InputLabel sx={{ mt: 2 }}>Max Quantity</InputLabel>
-            <TextField type="number" fullWidth value={form.max_quantity} onChange={handleChange('max_quantity')} sx={inputStyle} />
+            <TextField type="number" fullWidth value={form.max_quantity} onChange={handleChange('max_quantity')} sx={inputStyle} /> */}
 
             {['ingredients', 'use_for', 'target_issues', 'disposal_instructions', 'storage_precautions'].map((field) => (
               <Box key={field} sx={{ mt: 2, mb: 2 }}>

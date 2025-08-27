@@ -65,6 +65,27 @@ export function useGetUserInfo() {
 
   return memoizedValue;
 }
+export function useGetUserPermissions() {
+  const { user } = useAuth();
+  const userId = user?.user_id;
+  const { data, isLoading, error, isValidating } = useSWR(`/employee/permissions/${userId}`, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
+  const memoizedValue = useMemo(
+    () => ({
+      perm: data?.data || [],
+      permLoading: isLoading,
+      permError: error,
+      permValidating: isValidating,
+      permEmpty: !isLoading && !data?.data?.length
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
 
 export function useGetUserByFilter(businessUnitId, locationId) {
   const { user } = useAuth();

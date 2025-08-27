@@ -242,7 +242,6 @@ const ProductFilter = ({ filter, handelFilter }) => (
     <Grid item>
       <Categories category={filter.category_id} handelFilter={handelFilter} />
     </Grid>
-
     <Grid item>
       <Unit unit={filter.product_unit} handelFilter={handelFilter} />
     </Grid>

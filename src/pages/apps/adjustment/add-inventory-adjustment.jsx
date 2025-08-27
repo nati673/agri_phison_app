@@ -31,9 +31,11 @@ import { renderBusinessUnitOption } from 'components/inputs/renderBusinessUnitOp
 import { renderLocationOption } from 'components/inputs/renderLocationOption';
 import ProductSelector from 'sections/apps/product-center/products/ProductSelector';
 import { requiredInputStyle } from 'components/inputs/requiredInputStyle';
+import { renderBatchOption } from 'components/inputs/renderBatchOption';
 
 const initialLine = {
   product: null,
+  batch: null,
   previous_quantity: '',
   new_quantity: '',
   delta_quantity: '',
@@ -80,7 +82,6 @@ const reasonCodeMap = {
 const inputStyle = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '10px',
-    // backgroundColor: '#fff',
     transition: 'all 0.2s ease-in-out'
   },
   '& .MuiInputLabel-root': {
@@ -101,19 +102,16 @@ function ResponsiveHeaderRow({ label, children }) {
       <Typography sx={{ width: { sm: 140 }, minWidth: { sm: 140 } }} color="text.secondary">
         {label}
       </Typography>
-
       {children}
     </Box>
   );
 }
 
 const affectedTypes = [
-  // Quantity-related options
   { label: 'Batch Quantity', value: 'batch_qty', group: 'quantity' },
   { label: 'Stock Quantity', value: 'stock_qty', group: 'quantity' },
   { label: 'Purchase Quantity', value: 'purchase_qty', group: 'quantity' },
 
-  // Price-related options
   { label: 'Purchase Price', value: 'purchase_price', group: 'value' },
   { label: 'Selling Price', value: 'selling_price', group: 'value' }
 ];
@@ -126,26 +124,6 @@ export default function AddInventoryAdjustment() {
   const { setScanHandlerActive } = useTool();
   const newValueRefs = useRef([]);
   const [affectedType, setAffectedType] = useState('stock_qty');
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === '/') {
-        // Focus the first available input
-        if (newValueRefs.current && newValueRefs.current.length > 0) {
-          for (let i = 0; i < newValueRefs.current.length; i++) {
-            if (newValueRefs.current[i]) {
-              newValueRefs.current[i].focus();
-              break;
-            }
-          }
-        }
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   const [headerInfo, setHeaderInfo] = useState({
     business_unit: null,
     location: null,
@@ -158,15 +136,27 @@ export default function AddInventoryAdjustment() {
   const [lines, setLines] = useState([{ ...initialLine }]);
   const [bulkAddCount, setBulkAddCount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [productBatchesMap, setProductBatchesMap] = useState({});
 
   useEffect(() => {
     setScanHandlerActive(false);
-  }, []);
+  }, [setScanHandlerActive]);
 
   const locationOptions = headerInfo.business_unit
     ? (headerInfo.business_unit.locations || []).filter((loc) => loc.location_type !== 'branch')
     : (locations || []).filter((loc) => loc.location_type !== 'branch');
+
   const handleHeaderChange = (field, value) => {
+    if (field === 'adjustment_type') {
+      setHeaderInfo((p) => ({ ...p, adjustment_type: value }));
+      setLines([{ ...initialLine }]);
+      return;
+    }
+    if (field === 'affected_type') {
+      setHeaderInfo((p) => ({ ...p, affected_type: value }));
+      setLines([{ ...initialLine }]);
+      return;
+    }
     if (field === 'business_unit') {
       setHeaderInfo((p) => ({ ...p, business_unit: value, location: null }));
     } else {
@@ -180,9 +170,19 @@ export default function AddInventoryAdjustment() {
         if (i !== idx) return line;
         let updated = { ...line, [field]: value };
 
-        if (field === 'product' && value) {
-          updated.previous_quantity = value.quantity || 0;
-          updated.previous_unit_price = value.unit_price || 0;
+        if (field === 'batch' && value) {
+          updated.previous_quantity = value.quantity || '';
+          if (headerInfo.adjustment_type === 'value') {
+            if (affectedType === 'selling_price') updated.previous_unit_price = value.selling_price ?? '';
+            else if (affectedType === 'purchase_price') updated.previous_unit_price = value.purchase_price ?? '';
+            else updated.previous_unit_price = '';
+          }
+        }
+
+        if (field === 'product' && updated.batch && headerInfo.adjustment_type === 'value') {
+          if (affectedType === 'selling_price') updated.previous_unit_price = updated.batch.selling_price ?? '';
+          else if (affectedType === 'purchase_price') updated.previous_unit_price = updated.batch.purchase_price ?? '';
+          else updated.previous_unit_price = '';
         }
 
         if (field === 'previous_quantity' || field === 'new_quantity') {
@@ -198,6 +198,7 @@ export default function AddInventoryAdjustment() {
 
   const handleAddLine = () => setLines([...lines, { ...initialLine }]);
   const handleRemoveLine = (idx) => setLines(lines.filter((_, i) => i !== idx));
+  const handleClearLine = (idx) => setLines((prev) => prev.map((line, i) => (i === idx ? { ...initialLine } : line)));
 
   const handleBulkAdd = () => {
     const count = parseInt(bulkAddCount, 10);
@@ -205,11 +206,12 @@ export default function AddInventoryAdjustment() {
     setLines((prev) => [...prev, ...Array(count).fill({ ...initialLine })]);
     setBulkAddCount('');
   };
+
   function playErrorBeep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = ctx.createOscillator();
     oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(200, ctx.currentTime); // 600Hz beep
+    oscillator.frequency.setValueAtTime(200, ctx.currentTime);
     oscillator.connect(ctx.destination);
     oscillator.start();
     oscillator.stop(ctx.currentTime + 0.4);
@@ -220,7 +222,6 @@ export default function AddInventoryAdjustment() {
     const foundProduct = products.find((p) => p.sku?.toUpperCase() === code || p.barcode?.toUpperCase() === code);
     if (!foundProduct) return toast.error('Product not found');
 
-    // Check if product already in lines
     setLines((prev) => {
       const current = Array.isArray(prev) ? prev : [{ ...initialLine }];
       const alreadyScanned = current.some((line) => line.product?.product_id === foundProduct.product_id);
@@ -231,7 +232,6 @@ export default function AddInventoryAdjustment() {
         return current;
       }
 
-      // First scan: replace initial empty line, otherwise push new line
       if (current.length === 1 && !current[0].product) {
         toast.success(`Product added: ${foundProduct.name || foundProduct.sku || foundProduct.product_id}`);
         return [
@@ -269,6 +269,28 @@ export default function AddInventoryAdjustment() {
     });
   });
 
+  useEffect(() => {
+    const fetchNeededBatches = async () => {
+      const neededProductIds = lines.map((line) => line.product?.product_id).filter((pid) => pid && !(pid in productBatchesMap));
+      if (neededProductIds.length === 0) return;
+
+      let mapCopy = { ...productBatchesMap };
+      for (const pid of neededProductIds) {
+        try {
+          const batchesResp = await fetchProductBatches(pid, headerInfo.business_unit?.business_unit_id, headerInfo.location?.location_id);
+          mapCopy[pid] = batchesResp.data || [];
+        } catch (err) {
+          mapCopy[pid] = [];
+        }
+      }
+      setProductBatchesMap(mapCopy);
+    };
+
+    fetchNeededBatches();
+  }, [lines, headerInfo.location?.location_id, headerInfo.business_unit?.business_unit_id, productBatchesMap]);
+
+  const filteredAffectedTypes = affectedTypes.filter((t) => t.group === headerInfo.adjustment_type);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!headerInfo.business_unit || !headerInfo.location) {
@@ -281,6 +303,7 @@ export default function AddInventoryAdjustment() {
       business_unit_id: headerInfo.business_unit?.business_unit_id || null,
       location_id: headerInfo.location?.location_id || null,
       adjustment_type: headerInfo.adjustment_type,
+      affected_type: affectedType,
       reason_code: headerInfo.reason_code,
       adjustment_status: 'approved',
       notes: headerInfo.notes,
@@ -288,21 +311,17 @@ export default function AddInventoryAdjustment() {
       adjustment_date: headerInfo.adjustment_date ? format(headerInfo.adjustment_date, 'yyyy-MM-dd') : null
     };
 
-    const items = lines.map((l) => {
-      let item = { product_id: l.product?.product_id || null };
-
-      if (headerInfo.adjustment_type === 'quantity') {
-        item.previous_quantity = parseFloat(l.previous_quantity) || 0;
-        item.new_quantity = parseFloat(l.new_quantity) || 0;
-      }
-
-      if (headerInfo.adjustment_type === 'value') {
-        item.previous_unit_price = parseFloat(l.previous_unit_price) || null;
-        item.new_unit_price = parseFloat(l.new_unit_price) || null;
-      }
-
-      return item;
-    });
+    const items = lines.map((l) => ({
+      product_id: l.product?.product_id || null,
+      batch_id: l.batch?.batch_id || null,
+      purchase_id: l.product?.purchase_id || null,
+      purchase_item_id: l.product?.purchase_item_id || null,
+      previous_quantity: headerInfo.adjustment_type === 'quantity' ? parseFloat(l.previous_quantity) || 0 : undefined,
+      new_quantity: headerInfo.adjustment_type === 'quantity' ? parseFloat(l.new_quantity) || 0 : undefined,
+      previous_unit_price: headerInfo.adjustment_type === 'value' ? parseFloat(l.previous_unit_price) || null : undefined,
+      new_unit_price: headerInfo.adjustment_type === 'value' ? parseFloat(l.new_unit_price) || null : undefined,
+      notes: l.notes
+    }));
 
     if (items.some((i) => !i.product_id)) {
       toast.error('Each line must have a product.');
@@ -315,7 +334,6 @@ export default function AddInventoryAdjustment() {
       if (res.success) {
         toast.success(res.message);
         setLines([{ ...initialLine }]);
-
         setHeaderInfo({
           business_unit: null,
           location: null,
@@ -335,35 +353,7 @@ export default function AddInventoryAdjustment() {
       setLoading(false);
     }
   };
-  const handleClearLine = (idx) => {
-    setLines((prev) => prev.map((line, i) => (i === idx ? { ...initialLine } : line)));
-  };
-  const filteredAffectedTypes = affectedTypes.filter((t) => t.group === headerInfo.adjustment_type);
-  const [productBatchesMap, setProductBatchesMap] = useState({});
 
-  useEffect(() => {
-    const fetchNeededBatches = async () => {
-      const neededProductIds = lines.map((line) => line.product?.product_id).filter((pid) => pid && !(pid in productBatchesMap));
-
-      if (neededProductIds.length === 0) return;
-
-      let mapCopy = { ...productBatchesMap };
-
-      for (const pid of neededProductIds) {
-        try {
-          // ✅ Pass location_id + business_unit_id if API supports filtering batches
-          const batchesResp = await fetchProductBatches(pid, headerInfo.business_unit?.business_unit_id, headerInfo.location?.location_id);
-          mapCopy[pid] = batchesResp.data || [];
-        } catch (err) {
-          mapCopy[pid] = [];
-        }
-      }
-
-      setProductBatchesMap(mapCopy);
-    };
-
-    fetchNeededBatches();
-  }, [lines, headerInfo.location?.location_id, headerInfo.business_unit?.business_unit_id]);
   return (
     <form onSubmit={handleSubmit}>
       {/* Header */}
@@ -375,7 +365,7 @@ export default function AddInventoryAdjustment() {
             getOptionLabel={(o) => o.unit_name || ''}
             value={headerInfo.business_unit}
             onChange={(e, v) => handleHeaderChange('business_unit', v)}
-            renderOption={(props, option, params) => renderBusinessUnitOption(props, option, params)}
+            renderOption={renderBusinessUnitOption}
             isOptionEqualToValue={(o, v) => o.business_unit_id === v.business_unit_id}
             renderInput={(p) => <TextField {...p} size="small" required />}
             sx={requiredInputStyle}
@@ -389,7 +379,7 @@ export default function AddInventoryAdjustment() {
             getOptionLabel={(o) => o.location_name || ''}
             value={headerInfo.location}
             onChange={(e, v) => handleHeaderChange('location', v)}
-            renderOption={(props, option, params) => renderLocationOption(props, option, params)}
+            renderOption={renderLocationOption}
             isOptionEqualToValue={(o, v) => o.location_id === v.location_id}
             renderInput={(p) => <TextField {...p} size="small" required />}
             sx={requiredInputStyle}
@@ -416,7 +406,7 @@ export default function AddInventoryAdjustment() {
             getOptionLabel={(o) => o.label}
             value={filteredAffectedTypes.find((at) => at.value === affectedType) || null}
             onChange={(e, v) => setAffectedType(v ? v.value : filteredAffectedTypes[0].value)}
-            renderInput={(p) => <TextField {...p} size="small" />}
+            renderInput={(p) => <TextField {...p} size="small" required />}
             sx={requiredInputStyle}
           />
         </ResponsiveHeaderRow>
@@ -427,7 +417,8 @@ export default function AddInventoryAdjustment() {
             getOptionLabel={(o) => o.label}
             value={reasonCodeMap[affectedType].find((rc) => rc.value === headerInfo.reason_code) || null}
             onChange={(e, v) => handleHeaderChange('reason_code', v ? v.value : '')}
-            renderInput={(p) => <TextField {...p} size="small" />}
+            renderInput={(p) => <TextField {...p} size="small" required />}
+            required
             sx={requiredInputStyle}
           />
         </ResponsiveHeaderRow>
@@ -444,7 +435,7 @@ export default function AddInventoryAdjustment() {
                   sx: {
                     ...inputStyle,
                     '& .MuiInputBase-root': {
-                      height: 40 // set your desired height here
+                      height: 40
                     }
                   }
                 }
@@ -452,7 +443,6 @@ export default function AddInventoryAdjustment() {
             />
           </LocalizationProvider>
         </ResponsiveHeaderRow>
-
         <ResponsiveHeaderRow label="Notes">
           <TextField
             fullWidth
@@ -466,7 +456,6 @@ export default function AddInventoryAdjustment() {
         </ResponsiveHeaderRow>
       </Box>
 
-      {/* Bulk Add */}
       <Box mb={2} display="flex" alignItems="center" gap={2}>
         <Typography variant="body1" sx={{ flexGrow: 1 }}>
           Adjustment Items
@@ -484,7 +473,6 @@ export default function AddInventoryAdjustment() {
         </Button>
       </Box>
 
-      {/* Lines */}
       {lines.map((line, idx) => {
         const selectedIds = lines
           .filter((_, i) => i !== idx)
@@ -513,9 +501,16 @@ export default function AddInventoryAdjustment() {
                     getOptionLabel={(b) => b.batch_code || `Batch ${b.batch_id}`}
                     value={line.batch || null}
                     onChange={(e, v) => handleLineChange(idx, 'batch', v)}
-                    renderInput={(p) => <TextField {...p} label="Batch" size="small" />}
+                    renderOption={(props, option, state) => renderBatchOption(props, option, state)}
+                    renderInput={(p) => <TextField {...p} label="Batch" size="small" required />}
                     disabled={!line.product}
-                    sx={requiredInputStyle}
+                    slotProps={{
+                      popper: {
+                        sx: {
+                          minWidth: 400
+                        }
+                      }
+                    }}
                   />
                 </Grid>
                 {/* Quantity Inputs */}
@@ -541,6 +536,7 @@ export default function AddInventoryAdjustment() {
                         size="small"
                         sx={inputStyle}
                         inputRef={(el) => (newValueRefs.current[idx] = el)}
+                        required
                       />
                     </Grid>
                     <Grid item xs={6} sm={2}>
@@ -578,6 +574,7 @@ export default function AddInventoryAdjustment() {
                         size="small"
                         sx={inputStyle}
                         inputRef={(el) => (newValueRefs.current[idx] = el)}
+                        required
                       />
                     </Grid>
                   </>

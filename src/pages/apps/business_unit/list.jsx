@@ -213,28 +213,28 @@ export default function BusinessUnitListPage() {
 
   const columns = useMemo(
     () => [
-      {
-        id: 'Row Selection',
-        header: ({ table }) => (
-          <IndeterminateCheckbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <IndeterminateCheckbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
+      // {
+      //   id: 'Row Selection',
+      //   header: ({ table }) => (
+      //     <IndeterminateCheckbox
+      //       {...{
+      //         checked: table.getIsAllRowsSelected(),
+      //         indeterminate: table.getIsSomeRowsSelected(),
+      //         onChange: table.getToggleAllRowsSelectedHandler()
+      //       }}
+      //     />
+      //   ),
+      //   cell: ({ row }) => (
+      //     <IndeterminateCheckbox
+      //       {...{
+      //         checked: row.getIsSelected(),
+      //         disabled: !row.getCanSelect(),
+      //         indeterminate: row.getIsSomeSelected(),
+      //         onChange: row.getToggleSelectedHandler()
+      //       }}
+      //     />
+      //   )
+      // },
       {
         header: '#',
         accessorKey: 'business_unit_id',
@@ -246,6 +246,29 @@ export default function BusinessUnitListPage() {
         header: 'Unit Name',
         accessorKey: 'unit_name'
       },
+      {
+        header: 'Method',
+        accessorKey: 'deduction_method',
+        cell: ({ row }) => {
+          const method = row.original.deduction_method;
+
+          let description = '';
+          if (method === 'fifo') {
+            description = 'First In, First Out';
+          } else if (method === 'lifo') {
+            description = 'Last In, First Out';
+          } else {
+            description = 'Not Provided';
+          }
+
+          return (
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Typography color="text.secondary">{description}</Typography>
+            </Stack>
+          );
+        }
+      },
+
       {
         header: 'Unit Code',
         accessorKey: 'unit_code',

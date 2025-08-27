@@ -35,7 +35,7 @@ const initialEntry = {
 function AddNewPurchase() {
   const [entries, setEntries] = useState([{ ...initialEntry }]);
   const [bulkAddCount, setBulkAddCount] = useState('');
-  const { products } = useGetProducts();
+  const { products, refetch } = useGetProducts();
   const { BusinessUnits } = useGetBusinessUnit();
   const { locations } = useGetLocation();
   const [loading, setLoading] = useState(false);
@@ -54,6 +54,10 @@ function AddNewPurchase() {
   useEffect(() => {
     setScanHandlerActive(false);
   }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handlePurchaseInfoChange = (field, value) => {
     setPurchaseInfo((prev) => {
@@ -140,6 +144,7 @@ function AddNewPurchase() {
       product_id: entry.product?.product_id || null,
       quantity: Number(entry.quantity) || 0,
       purchase_price: Number(entry.purchase_price) || 0,
+      selling_price: Number(entry.selling_price) || 0,
       manufacture_date: entry.manufactureDate || null,
       expiry_date: entry.expiryDate || null,
       batch_code: entry.batch_code || null
@@ -203,7 +208,6 @@ function AddNewPurchase() {
                 onChange={(e) => handlePurchaseInfoChange('supplier', e.target.value)}
                 fullWidth
                 size="small"
-                // required
               />
             </Grid>
             <Grid item xs={12} sm={3}>
@@ -276,7 +280,7 @@ function AddNewPurchase() {
           <Card key={idx} variant="outlined" sx={{ mb: 2 }}>
             <CardContent>
               <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={2}>
+                <Grid item xs={12} sm={4}>
                   <ProductSelector
                     products={products}
                     businessUnitId={purchaseInfo.business_unit?.business_unit_id}
@@ -288,7 +292,7 @@ function AddNewPurchase() {
                   />
                 </Grid>
 
-                <Grid item xs={6} sm={1.5}>
+                <Grid item xs={6} sm={4}>
                   <TextField
                     label="Quantity"
                     type="number"
@@ -301,10 +305,20 @@ function AddNewPurchase() {
                     inputRef={(el) => (quantityRefs.current[idx] = el)}
                   />
                 </Grid>
-
-                <Grid item xs={6} sm={1.8}>
+                <Grid item xs={6} sm={3.5}>
                   <TextField
                     label="Purchase Price"
+                    type="number"
+                    inputProps={{ min: 0, step: '0.01' }}
+                    value={entry.selling_price}
+                    onChange={(e) => handleChange(idx, 'selling_price', e.target.value)}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={6} sm={3.5}>
+                  <TextField
+                    label="Selling Price"
                     type="number"
                     inputProps={{ min: 0, step: '0.01' }}
                     value={entry.purchase_price}
@@ -313,7 +327,8 @@ function AddNewPurchase() {
                     size="small"
                   />
                 </Grid>
-                <Grid item xs={6} sm={1.5}>
+
+                <Grid item xs={6} sm={3.5}>
                   <TextField
                     label="Total Cost"
                     type="number"

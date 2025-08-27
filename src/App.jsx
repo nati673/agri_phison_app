@@ -17,6 +17,7 @@ import { ToolProvider } from 'contexts/ToolContext'; // import your ToolContext 
 
 import toast, { Toaster } from 'react-hot-toast';
 import BarcodeModal from 'sections/apps/tools/toolModal';
+import { useDisableNumberInputScroll } from 'hooks/useDisableNumberInputScroll';
 // import { FirebaseProvider as AuthProvider } from 'contexts/FirebaseContext';
 // import { AWSCognitoProvider as AuthProvider } from 'contexts/AWSCognitoContext';
 // import { Auth0Provider as AuthProvider } from 'contexts/Auth0Context';
@@ -24,6 +25,7 @@ import BarcodeModal from 'sections/apps/tools/toolModal';
 // ==============================|| APP - THEME, ROUTER, LOCAL  ||============================== //
 
 export default function App() {
+  useDisableNumberInputScroll();
   return (
     <ThemeCustomization>
       <RTLLayout>

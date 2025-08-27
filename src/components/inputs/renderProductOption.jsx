@@ -27,7 +27,7 @@ const formatPrice = (value) => {
   return `ETB ${parseFloat(value).toFixed(2)}`;
 };
 
-export const renderProductOption = (props, option, state) => {
+export const renderProductOption = (props, option, state, priceFlag = true) => {
   const { selected, inputValue } = state || {};
   const theme = useTheme();
 
@@ -92,7 +92,6 @@ export const renderProductOption = (props, option, state) => {
               sx={{
                 height: 20,
                 bgcolor: 'gold',
-                // color: 'white',
                 '& .MuiChip-label': { px: 0.75, fontSize: 11, fontWeight: 600 }
               }}
             />
@@ -102,14 +101,14 @@ export const renderProductOption = (props, option, state) => {
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25, flexWrap: 'wrap' }}>
-          {priceText && (
+          {priceText && priceFlag && (
             <Typography variant="caption" sx={{ fontSize: 13, fontWeight: 600, color: 'success.dark' }}>
               {priceText}
             </Typography>
           )}
           {option.sku && (
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12 }} noWrap>
-              {priceText ? '· ' : ''}SKU: {option.sku}
+              {priceText && priceFlag ? '· ' : `${option.product_unit} · `} SKU: {option.sku}
             </Typography>
           )}
           {volume && (

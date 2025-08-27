@@ -136,9 +136,11 @@ export default function StockTransferInvoice({ data, grandTotal }) {
                         <td className="tm_width_6">
                           {item.product_name} {item.volume ? `(${item.volume})` : ''}
                         </td>
-                        <td className="tm_width_2">{birrFormatter.format(item.price)}</td>
+                        <td className="tm_width_2">{birrFormatter.format(item.selling_price)}</td>
                         <td className="tm_width_1 tm_text_center">{item.quantity}</td>
-                        <td className="tm_width_2 tm_text_right">{birrFormatter.format((item.price * item.quantity).toFixed(2))}</td>
+                        <td className="tm_width_2 tm_text_right">
+                          {birrFormatter.format((item.selling_price * item.quantity).toFixed(2))}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
