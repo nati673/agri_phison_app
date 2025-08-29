@@ -128,6 +128,7 @@ const applications = {
       title: <FormattedMessage id="product-center" />,
       type: 'collapse',
       icon: icons.box1,
+      permissions: [{ action: 'view', module: 'products' }],
       children: [
         {
           id: 'products',
@@ -194,6 +195,7 @@ const applications = {
       title: <FormattedMessage id="purchase" />,
       type: 'item',
       url: '/workspace/purchase/list',
+      permissions: [{ action: 'view', module: 'purchase' }],
       icon: icons.purchase,
       actions: [
         {
@@ -234,9 +236,17 @@ const applications = {
       id: 'order',
       title: <FormattedMessage id="order" />,
       type: 'item',
-      url: '/workspace/order',
+      url: '/workspace/order/list',
       icon: icons.order,
-      breadcrumbs: false
+      breadcrumbs: false,
+      actions: [
+        {
+          type: NavActionType.LINK,
+          label: 'Full Calendar',
+          icon: icons.add,
+          url: '/workspace/order/add-new-order'
+        }
+      ]
     },
 
     // {

@@ -18,7 +18,16 @@ export const endpoints = {
   update: '/employee',
   user_info: '/employee/profile',
   update_profile: '/employee/profile',
-  user_filter: '/employee/filter'
+  user_filter: '/employee/filter',
+
+  getActivities: '/activity/employee',
+  session: '/employee/session',
+  getSessions: '/session/employee',
+  goal: '/employee/goal',
+  getGoals: '/goal/employee',
+  updateGoal: '/goal',
+  report: '/employee/report',
+  getReports: '/report/employee'
 };
 
 export function useGetUsers() {
@@ -75,7 +84,7 @@ export function useGetUserPermissions() {
   });
   const memoizedValue = useMemo(
     () => ({
-      perm: data?.data || [],
+      perm: data?.data || null,
       permLoading: isLoading,
       permError: error,
       permValidating: isValidating,
@@ -245,5 +254,80 @@ export function handlerUserDialog(modal) {
       return { ...currentUsermaster, modal };
     },
     false
+  );
+}
+
+export function useGetActivitiesByUser(user_id) {
+  const { data, isLoading, error } = useSWR(`${endpoints.getActivities}/${user_id}`, fetcher);
+  return useMemo(
+    () => ({
+      activities: data?.data || [],
+      activitiesLoading: isLoading,
+      activitiesError: error
+    }),
+    [data, isLoading, error]
+  );
+}
+
+// Session
+export async function createSession(sessionData) {
+  const res = await axios.post(endpoints.session, sessionData);
+  await mutate(`${endpoints.getSessions}/${sessionData.user_id}`);
+  return res.data;
+}
+
+export function useGetSessionsByUser(user_id) {
+  const { data, isLoading, error } = useSWR(`${endpoints.getSessions}/${user_id}`, fetcher);
+  return useMemo(
+    () => ({
+      sessions: data?.data || [],
+      sessionsLoading: isLoading,
+      sessionsError: error
+    }),
+    [data, isLoading, error]
+  );
+}
+
+// Goals
+export async function createGoal(goalData) {
+  const res = await axios.post(endpoints.goal, goalData);
+  await mutate(`${endpoints.getGoals}/${goalData.user_id}`);
+  return res.data;
+}
+
+export function useGetGoalsByUser(user_id) {
+  const { data, isLoading, error } = useSWR(`${endpoints.getGoals}/${user_id}`, fetcher);
+  return useMemo(
+    () => ({
+      goals: data?.data || [],
+      goalsLoading: isLoading,
+      goalsError: error
+    }),
+    [data, isLoading, error]
+  );
+}
+
+export async function updateGoalAchievement(goal_id, achieved_value, user_id) {
+  const res = await axios.put(`${endpoints.updateGoal}/${goal_id}/achieve`, { achieved_value });
+  await mutate(`${endpoints.getGoals}/${user_id}`);
+  return res.data;
+}
+
+// Report
+export async function createReport(reportData) {
+  const res = await axios.post(endpoints.report, reportData);
+  await mutate(`${endpoints.getReports}/${reportData.target_user_id}`);
+  return res.data;
+}
+
+export function useGetReportsByUser(user_id) {
+  const { data, isLoading, error } = useSWR(`${endpoints.getReports}/${user_id}`, fetcher);
+  return useMemo(
+    () => ({
+      reports: data?.data || [],
+      reportsLoading: isLoading,
+      reportsError: error
+    }),
+    [data, isLoading, error]
   );
 }

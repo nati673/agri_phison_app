@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useLoaderData } from 'react-router-dom';
+import { useLoaderData, useNavigate } from 'react-router-dom';
 import { alpha, styled, useTheme } from '@mui/material/styles';
 import {
   Box,
@@ -26,7 +26,7 @@ import MainCard from 'components/MainCard';
 import ScrollX from 'components/ScrollX';
 import IconButton from 'components/@extended/IconButton';
 import { HeaderSort, IndeterminateCheckbox, RowSelection, TablePagination } from 'components/third-party/react-table';
-import { ArrowDown2, ArrowUp2, Edit, SearchNormal1, Setting2, Trash } from 'iconsax-react';
+import { Add, ArrowDown2, ArrowUp2, Chart, Edit, SearchNormal1, Setting2, Trash } from 'iconsax-react';
 
 import OrderView from '../../../sections/apps/order/OrderView';
 import OrderOverview from '../../../sections/apps/order/OrderOverview';
@@ -295,7 +295,7 @@ export default function OrderListPage() {
   const theme = useTheme();
   const { user } = useAuth();
   const { container } = useConfig();
-
+  const navigate = useNavigate();
   const initialOrders = useLoaderData();
   const [orders, setOrders] = useState(Array.isArray(initialOrders) ? initialOrders : []);
   const [filter, setFilter] = useState({ business_unit_id: '', location_id: '', status: '', customer_search: '' });
@@ -399,6 +399,18 @@ export default function OrderListPage() {
                 {row.getCanExpand() && row.getIsExpanded() ? <ArrowUp2 /> : <ArrowDown2 />}
               </IconButton>
             </Tooltip>
+            <Tooltip title="Sell Order">
+              <IconButton
+                color="info"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/workspace/sales/add-sales?order=${row.original.order_uuid}`);
+                }}
+              >
+                <Add />
+              </IconButton>
+            </Tooltip>
+
             <Tooltip title="Edit">
               <IconButton
                 color="primary"

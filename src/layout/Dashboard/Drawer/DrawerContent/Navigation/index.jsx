@@ -1,12 +1,10 @@
-import { Fragment, useLayoutEffect, useState } from 'react';
-
+import { Fragment, useMemo, useState } from 'react';
 // material-ui
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-
 // project-imports
 import NavItem from './NavItem';
 import NavGroup from './NavGroup';
@@ -16,68 +14,66 @@ import { MenuFromAPI } from 'menu-items/dashboard';
 import useConfig from 'hooks/useConfig';
 import { MenuOrientation, HORIZONTAL_MAX_ITEM } from 'config';
 import { useGetMenu, useGetMenuMaster } from 'api/menu';
+import { useGetUserPermissions } from 'api/users';
 
-function isFound(arr, str) {
-  return arr.items.some((element) => {
-    if (element.id === str) {
-      return true;
-    }
-    return false;
-  });
+// Permission filter (stable, safe)
+function filterByPermission(items, userPermissions) {
+  // Robustness: always array
+  function hasPermission(requiredPerms, userPerms) {
+    if (!requiredPerms || requiredPerms.length === 0) return true;
+    if (requiredPerms === 'all') return true;
+    const required = Array.isArray(requiredPerms) ? requiredPerms : [];
+    const user = Array.isArray(userPerms) ? userPerms : [];
+    if (user.length === 0) return false;
+    return required.some((req) => user.some((up) => req.action === up.action && req.module === up.module_name));
+  }
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item) => !item.permissions || hasPermission(item.permissions, userPermissions))
+    .map((item) => ({
+      ...item,
+      children: item.children ? filterByPermission(item.children, userPermissions) : undefined
+    }));
 }
-
-// ==============================|| DRAWER CONTENT - NAVIGATION ||============================== //
 
 export default function Navigation() {
   const theme = useTheme();
-
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
-
+  const { perm } = useGetUserPermissions();
   const { menuOrientation } = useConfig();
   const { menuLoading } = useGetMenu();
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const userPerm = perm && perm.permissions;
 
   const [selectedID, setSelectedID] = useState('');
   const [selectedItems, setSelectedItems] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0);
-  const [menuItems, setMenuItems] = useState({ items: [] });
 
-  let dashboardMenu = MenuFromAPI();
-  useLayoutEffect(() => {
-    if (menuLoading && !isFound(menuItem, 'group-dashboard-loading')) {
-      menuItem.items.splice(0, 0, dashboardMenu);
-      setMenuItems({ items: [...menuItem.items] });
-    } else if (!menuLoading && dashboardMenu?.id !== undefined && !isFound(menuItem, 'group-dashboard')) {
-      menuItem.items.splice(0, 1, dashboardMenu);
-      setMenuItems({ items: [...menuItem.items] });
-    } else {
-      setMenuItems({ items: [...menuItem.items] });
-    }
-    // eslint-disable-next-line
-  }, [menuLoading]);
+  const filteredMenuItems = useMemo(() => {
+    let items = Array.isArray(menuItem.items) ? menuItem.items : [];
+    items = filterByPermission(items, userPerm || []);
+    return items;
+  }, [userPerm]);
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
-
   const lastItem = isHorizontal ? HORIZONTAL_MAX_ITEM : null;
-  let lastItemIndex = menuItems.items.length - 1;
+  let lastItemIndex = filteredMenuItems.length - 1;
   let remItems = [];
   let lastItemId;
 
-  if (lastItem && lastItem < menuItems.items.length) {
-    lastItemId = menuItems.items[lastItem - 1].id;
+  if (lastItem && lastItem < filteredMenuItems.length) {
+    lastItemId = filteredMenuItems[lastItem - 1].id;
     lastItemIndex = lastItem - 1;
-    remItems = menuItems.items.slice(lastItem - 1, menuItems.items.length).map((item) => ({
+    remItems = filteredMenuItems.slice(lastItem - 1).map((item) => ({
       title: item.title,
       elements: item.children,
       icon: item.icon,
-      ...(item.url && {
-        url: item.url
-      })
+      ...(item.url && { url: item.url })
     }));
   }
 
-  const navGroups = menuItems.items.slice(0, lastItemIndex + 1).map((item) => {
+  const navGroups = filteredMenuItems.slice(0, lastItemIndex + 1).map((item) => {
     switch (item.type) {
       case 'group':
         if (item.url && item.id !== lastItemId) {

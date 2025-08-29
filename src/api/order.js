@@ -43,7 +43,26 @@ export function useGetOrders() {
 
   return memoizedValue;
 }
+export function useGetOrderInfoForSales(ORDER_UUID) {
+  const { data, isLoading, error, isValidating } = useSWR(ORDER_UUID && `/order/info/${ORDER_UUID}`, fetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false
+  });
 
+  const memoizedValue = useMemo(
+    () => ({
+      orderInfo: data?.data || null,
+      orderInfoLoading: isLoading,
+      orderInfoError: error,
+      orderInfoValidating: isValidating,
+      orderInfoEmpty: !isLoading && !data?.data?.length
+    }),
+    [data, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
 // Add a new order
 export async function addOrder(payload) {
   const { data } = await axios.post(`/order/add-new-order`, payload);

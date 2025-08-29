@@ -40,6 +40,9 @@ import { addDays } from 'date-fns';
 import WiderPopper from 'components/inputs/WiderPopper';
 import { useNavigate } from 'react-router';
 import useAuth from 'hooks/useAuth';
+import { useGetOrderInfoForSales } from 'api/order';
+import { usePopulateSalesFromOrder } from 'sections/apps/sales/usePopulateSalesFromOrder';
+import { SalesFormSkeleton } from 'sections/apps/sales/SalesFormSkeleton';
 
 const initialEntry = {
   product: null,
@@ -61,16 +64,20 @@ export default function SalesForm() {
     customer: null
   });
   const navigate = useNavigate();
-
+  const params = new URLSearchParams(location.search);
+  const orderUuid = params.get('order');
   const { BusinessUnits } = useGetBusinessUnit();
-  const { locations } = useGetLocation();
-  const { customers } = useGetCustomer();
-  const { products, refetch } = useGetProducts();
+  const { locations, locationsLoading } = useGetLocation();
+  const { customers, customersLoading } = useGetCustomer();
+  const { products, refetch, productsLoading } = useGetProducts();
   const { setScanHandlerActive } = useTool();
   const [paidAmount, setPaidAmount] = useState('');
   const [paybackDate, setPaybackDate] = useState(null);
   const [salesType, setSalesType] = useState('normal');
   const [isFullyPaid, setIsFullyPaid] = useState(true);
+  const { orderInfo, orderInfoLoading } = useGetOrderInfoForSales(orderUuid);
+  console.log(orderInfo);
+  const loadingInitialData = orderInfoLoading || productsLoading || locationsLoading || customersLoading;
 
   const [previewResults, setPreviewResults] = useState({});
 
@@ -164,9 +171,8 @@ export default function SalesForm() {
 
         return updatedEntry;
       })
-    );
-    // Call preview after updating entry
-    if ((field === 'product' || field === 'quantity') && value) {
+    ); // Always trigger preview update on discount change
+    if ((field === 'product' || field === 'quantity' || field === 'discountPercent' || field === 'discountAmount') && value) {
       // Slight delay ensures latest state
       const updatedEntry = {
         ...entries[idx],
@@ -279,7 +285,8 @@ export default function SalesForm() {
         is_fully_paid: isFullyPaid,
         grand_total: realGrandTotal,
         sales_type: salesType,
-        items: payload
+        items: payload,
+        order: orderInfo
       };
       const response = await AddNewSales(formToSend);
       if (response.success) {
@@ -302,10 +309,35 @@ export default function SalesForm() {
     }
   };
 
+  if (orderInfo !== undefined) {
+    usePopulateSalesFromOrder({
+      orderInfo,
+      products,
+      BusinessUnits,
+      locations,
+      customers,
+      setSaleInfo,
+      setEntries,
+      initialEntry,
+      handlePreview,
+      entries
+    });
+  }
+
+  if (loadingInitialData) return <SalesFormSkeleton />;
+
   const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0);
+
+  const disableInput = orderUuid && { opacity: 0.5, pointerEvents: 'none', userSelect: 'none', filter: 'grayscale(40%)' };
   return (
     <form onSubmit={handleSubmit}>
-      <MainCard sx={{ mb: 3, p: 3 }}>
+      <MainCard
+        sx={{
+          mb: 3,
+          p: 3,
+          ...disableInput
+        }}
+      >
         <Typography variant="h5" mb={2}>
           New Sale Entry
         </Typography>
@@ -428,7 +460,9 @@ export default function SalesForm() {
         const discountPercent = Number(entry.discountPercent) || 0;
         const discountAmount = Number(entry.discountAmount) || 0;
         const discountPrice =
-          preview && preview.batches && preview.batches.length === 1 ? Number(preview.batches[0].unit_price) : Number(entry.price);
+          preview && preview.batches && preview.batches.length > 0 ? Number(preview.batches[0].unit_price) : Number(entry.price);
+
+        console.log(preview);
         let totalDiscount = 0;
         if (discountPercent > 0) {
           totalDiscount = previewLineTotal * (discountPercent / 100);

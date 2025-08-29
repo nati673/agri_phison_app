@@ -27,6 +27,8 @@ import { Formik } from 'formik';
 
 // assets
 import { Eye, EyeSlash, Minus, TickCircle } from 'iconsax-react';
+import toast from 'react-hot-toast';
+import useAuth from 'hooks/useAuth';
 
 // ==============================|| ACCOUNT PROFILE - PASSWORD CHANGE ||============================== //
 
@@ -34,7 +36,8 @@ export default function TabPassword() {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const { user, changePassword } = useAuth();
+  const userId = user?.user_id;
   const handleClickShowOldPassword = () => {
     setShowOldPassword(!showOldPassword);
   };
@@ -72,19 +75,19 @@ export default function TabPassword() {
         })}
         onSubmit={async (values, { resetForm, setErrors, setStatus, setSubmitting }) => {
           try {
-            openSnackbar({
-              open: true,
-              message: 'Password changed successfully.',
-              variant: 'alert',
-              alert: { color: 'success' }
-            });
+            const data = await changePassword(values.old, values.password, userId);
+            if (data.success) {
+              toast.success(data.message);
+            }
 
             resetForm();
-            setStatus({ success: false });
+            setStatus({ success: true });
             setSubmitting(false);
           } catch (err) {
+            toast.error(err.message || err.error || 'Something want wrong');
+
             setStatus({ success: false });
-            setErrors({ submit: err.message });
+            setErrors({ submit: err.response?.data?.message || err.message });
             setSubmitting(false);
           }
         }}

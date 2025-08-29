@@ -11,7 +11,7 @@ export const requiredInputStyle = {
       width: 4.8,
       borderTopLeftRadius: 100,
       borderBottomLeftRadius: 100,
-      backgroundColor: '#C3C6C8'
+      backgroundColor: '#008245'
     }
   },
   '& .MuiInputBase-root': { height: 48 }

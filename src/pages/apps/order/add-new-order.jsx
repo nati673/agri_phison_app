@@ -137,9 +137,9 @@ export default function AddOrder() {
         let updated = { ...line, [field]: value };
 
         // Autofill unit price from product selection
-        if (field === 'product' && value) {
-          updated.unit_price = value.unit_price || '';
-        }
+        // if (field === 'product' && value) {
+        //   updated.unit_price = value.unit_price || '';
+        // }
         return updated;
       })
     );
@@ -246,7 +246,6 @@ export default function AddOrder() {
         });
       }
       navigate('/workspace/order/list');
-
     } catch (err) {
       console.error(err);
       toast.error(err.message || err.error || 'Error creating order');
@@ -394,7 +393,6 @@ export default function AddOrder() {
                     onChange={(e) => handleLineChange(idx, 'unit_price', e.target.value)}
                     size="small"
                     sx={inputStyle}
-                    InputProps={{ readOnly: true }}
                   />
                 </Grid>
                 <Grid item xs={6} sm={2}>

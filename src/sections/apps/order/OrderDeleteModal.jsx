@@ -17,10 +17,10 @@ import { deleteOrder } from 'api/order'; // <-- use your API function here
 
 // ==============================|| Order - DELETE (Relaxed Version) ||============================== //
 
-export default function AlertOrderDelete({ id, company_id, title, open, handleClose, actionDone }) {
+export default function AlertOrderDelete({ order, company_id, title, open, handleClose, actionDone }) {
   const deleteHandler = async () => {
     try {
-      const res = await deleteOrder(id, company_id);
+      const res = await deleteOrder(order?.order_id, company_id);
       if (res.success) {
         toast.success(res.message || 'Order removed');
       }

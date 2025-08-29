@@ -35,9 +35,10 @@ axiosServices.interceptors.response.use(
       if (currentPath !== path) window.location.pathname = path;
     };
 
-    if (status === 401 && !currentPath.includes('/login')) {
-      redirectTo('/maintenance/500');
-    }
+    // if (status === 401 && !currentPath.includes('/login')) {
+    //   redirectTo('/maintenance/500');
+    // }
+    // 1@$ddfAdf
 
     if (status === 403) {
       switch (data.code) {
@@ -54,7 +55,7 @@ axiosServices.interceptors.response.use(
           redirectTo('/subscription/expired');
           break;
         default:
-          // redirectTo('/maintenance/403');
+        // redirectTo('/maintenance/403');
       }
     }
 

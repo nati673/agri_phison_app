@@ -21,12 +21,16 @@ import AuthGuard from 'utils/route-guard/AuthGuard';
 import { DRAWER_WIDTH, MenuOrientation } from 'config';
 import useConfig from 'hooks/useConfig';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import { useSmartSessionTracker } from 'hooks/useUserSession';
+import useAuth from 'hooks/useAuth';
 
 // ==============================|| MAIN LAYOUT ||============================== //
 
 export default function MainLayout() {
   const theme = useTheme();
+  const { user } = useAuth();
 
+  useSmartSessionTracker(user);
   const { menuMasterLoading } = useGetMenuMaster();
   const downXL = useMediaQuery(theme.breakpoints.down('xl'));
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));

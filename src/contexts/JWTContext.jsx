@@ -189,6 +189,13 @@ export const JWTProvider = ({ children }) => {
     return response;
   };
 
+  const changePassword = async (currentPassword, newPassword, userId) => {
+    const newPasswordData = { currentPassword: currentPassword, newPassword: newPassword };
+    const { data } = await axios.post(`/employee/change-password/${userId}`, newPasswordData);
+
+    return data;
+  };
+
   const register = async (email, password, firstName, lastName, company, phone_number) => {
     try {
       const response = await axios.post('/register', {
@@ -232,7 +239,8 @@ export const JWTProvider = ({ children }) => {
         register,
         resetPassword,
         resetPasswordReq,
-        updateProfile
+        updateProfile,
+        changePassword
       }}
     >
       {children}

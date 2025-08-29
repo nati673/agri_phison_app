@@ -53,8 +53,9 @@ import { useGetCustomer } from 'api/customer';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 
 // assets
-import { Add, Edit, Eye, Profile, Trash } from 'iconsax-react';
+import { Add, Chart1, Edit, Eye, Profile, Trash } from 'iconsax-react';
 import useAuth from 'hooks/useAuth';
+import { useNavigate } from 'react-router';
 
 // ==============================|| REACT TABLE - LIST ||============================== //
 
@@ -201,7 +202,7 @@ function ReactTable({ data, columns, modalToggler }) {
 export default function CustomerListPage() {
   const { user } = useAuth();
   const theme = useTheme();
-
+  const navigate = useNavigate();
   const { customersLoading: loading, customers: lists } = useGetCustomer();
 
   const [open, setOpen] = useState(false);
@@ -307,6 +308,17 @@ export default function CustomerListPage() {
               <Tooltip title="View">
                 <IconButton color="secondary" onClick={row.getToggleExpandedHandler()}>
                   {collapseIcon}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Customer's Transaction History">
+                <IconButton
+                  color="info"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/workspace/customer/transactions/details/${row.original.post_id}`);
+                  }}
+                >
+                  <Chart1 />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Edit">

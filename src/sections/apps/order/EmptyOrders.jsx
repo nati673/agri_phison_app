@@ -14,7 +14,7 @@ function EmptyOrders({ setFilter, filter }) {
   const navigate = useNavigate();
 
   const handleAddOrder = () => {
-    navigate('/workspace/order/add-order');
+    navigate('/workspace/order/add-new-order');
   };
 
   const handleClearFilter = () => {
