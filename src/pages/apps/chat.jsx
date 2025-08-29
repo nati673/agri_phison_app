@@ -92,7 +92,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!usersLoading) {
-      const newUser = users.filter((item) => item.id?.toString() === '2')[0];
+      const newUser = users?.filter((item) => item.id?.toString() === '2')[0];
       setUser(newUser);
     }
     // eslint-disable-next-line
@@ -157,7 +157,6 @@ export default function Chat() {
     handleOnSend();
   };
 
-  // handle emoji
   const onEmojiClick = (emojiObject) => {
     setMessage(message + emojiObject.emoji);
   };
@@ -169,7 +168,6 @@ export default function Chat() {
     setAnchorElEmoji(null);
   };
 
-  // close sidebar when widow size below 'md' breakpoint
   useEffect(() => {
     setOpenChatDrawer(!matchDownSM);
   }, [matchDownSM]);
@@ -180,7 +178,7 @@ export default function Chat() {
         openChatDrawer={openChatDrawer}
         handleDrawerOpen={handleDrawerOpen}
         setUser={setUser}
-        selectedUser={usersLoading || Object.keys(user).length === 0 ? null : user.id}
+        selectedUser={usersLoading || Object?.keys(user).length === 0 ? null : user.id}
       />
       <Main theme={theme} open={openChatDrawer}>
         <Grid container>

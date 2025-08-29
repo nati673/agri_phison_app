@@ -13,18 +13,18 @@ export default function ProductSelector({
   disabled = false,
   price
 }) {
-  const filteredProducts = useMemo(() => {
-    return (products || [])
-      .filter(
-        (p) =>
-          (!businessUnitId || p.business_unit_id === businessUnitId) &&
-          (!locationId ||
-            p.location_id === locationId ||
-            (p.location_ids || []).includes(locationId) ||
-            (p.locations || []).some((loc) => loc.location_id === locationId))
-      )
-      .filter((p) => !selectedProductIds.includes(p.product_id));
-  }, [products, businessUnitId, locationId, selectedProductIds]);
+  // Only filter by location and businessUnitId, not by stock quantity
+  const filteredProducts = useMemo(
+    () =>
+      (products || []).filter(
+        (product) =>
+          // There exists a stock entry for this location & business unit, no matter the quantity
+          (product.stocks || []).some(
+            (stock) => Number(stock.location_id) === Number(locationId) && Number(stock.business_unit_id) === Number(businessUnitId)
+          ) && !selectedProductIds.includes(product.product_id)
+      ),
+    [products, businessUnitId, locationId, selectedProductIds]
+  );
 
   return (
     <Autocomplete

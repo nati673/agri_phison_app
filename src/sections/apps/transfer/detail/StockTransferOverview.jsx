@@ -1,33 +1,40 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, Grid, Card, CardContent, Divider, Chip, Avatar, Stack, Button, Tooltip } from '@mui/material';
-import { CloseCircle, TickCircle, User } from 'iconsax-react';
+import { Clock, CloseCircle, TickCircle, User } from 'iconsax-react';
 import StockTransferStatusModal from '../StockTransferStatusModal';
+// import { Clock } from '@mui/x-date-pickers/TimeClock/Clock';
 
 // Status metadata
-const STATUS_METADATA = {
+const STATUS_META = {
   pending: {
     color: 'warning',
+    borderColor: '#F5A623',
     label: 'Pending',
-    icon: <TickCircle sx={{ fontSize: 18 }} />
+    icon: <Clock size={18} color="#fff" variant="Bold" />
   },
-  completed: {
+  received: {
     color: 'success',
-    label: 'Completed',
-    icon: <TickCircle sx={{ fontSize: 18 }} />
+    borderColor: '#43A047',
+    label: 'Received',
+    icon: <TickCircle size={18} color="#fff" variant="Bold" />
   },
-  cancelled: {
+  rejected: {
     color: 'error',
-    label: 'Cancelled',
-    icon: <CloseCircle sx={{ fontSize: 18 }} />
+    borderColor: '#D32F2F',
+    label: 'Rejected',
+    icon: <CloseCircle size={18} color="#fff" variant="Bold" />
   }
 };
-
 // Get user profile API URL
 const getProfileUrl = (profile) => (profile ? `${import.meta.env.VITE_APP_API_URL}/user/profile/${profile}` : undefined);
 
-export default function StockTransferOverview({ data, grandTotal, onStatusChange }) {
-  const [status, setStatus] = useState(data.transfer_status || 'pending');
+export default function StockTransferOverview({ data, grandTotal, onStatusChange, onActionDone, onFetch }) {
+  const [localDetail, setLocalDetail] = useState(data);
+  const [status, setStatus] = useState(localDetail.transfer_status || 'pending');
 
+  useEffect(() => {
+    setLocalDetail(data);
+  }, [data]);
   // Manage modal open state
   const [openModal, setOpenModal] = useState(false);
 
@@ -44,8 +51,9 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
 
   const show = (val, fallback = '-- Not Set --') => (val ? val : <span style={{ opacity: 0.5, fontStyle: 'italic' }}>{fallback}</span>);
 
-  const totalItems = data.items?.length || 0;
-  const totalQuantity = data.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || 0;
+  const totalItems = localDetail.items?.length || 0;
+  const totalQuantity = localDetail.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) || 0;
+  const meta = STATUS_META[status] || STATUS_META.pending;
 
   return (
     <>
@@ -53,7 +61,7 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
         elevation={0}
         sx={{
           borderRadius: '20px',
-          border: '1px dashed #32CD32'
+          border: `2px dashed ${meta.borderColor}`
         }}
       >
         <CardContent sx={{ px: { xs: 2, sm: 4 }, py: 3 }}>
@@ -64,29 +72,24 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
                 Business Unit
               </Typography>
               <Typography variant="h5" fontWeight={700} gutterBottom>
-                {show(data.unit_name)}
+                {show(localDetail.unit_name)}
               </Typography>
 
               {/* Status + date */}
               <Stack direction="row" alignItems="center" spacing={1} mt={1} mb={2}>
                 <Chip
-                  icon={STATUS_METADATA[status]?.icon}
-                  label={STATUS_METADATA[status]?.label || status}
-                  color={STATUS_METADATA[status]?.color || 'default'}
+                  icon={meta.icon}
+                  label={meta.label}
+                  color={meta.color}
                   size="medium"
-                  sx={{ fontWeight: 700, px: 2, fontSize: 15 }}
+                  sx={{ fontWeight: 700, px: 2, fontSize: 15, color: '#fff' }}
                 />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setOpenModal(true)} // 👈 open modal here
-                  sx={{ ml: 1, fontWeight: 600, borderRadius: 2 }}
-                >
+                <Button variant="outlined" size="small" onClick={() => setOpenModal(true)} sx={{ ml: 1, fontWeight: 600, borderRadius: 2 }}>
                   Change Status
                 </Button>
                 <Typography variant="body2" sx={{ ml: 2 }}>
-                  {data.transfer_date
-                    ? new Date(data.transfer_date).toLocaleString('en-GB', {
+                  {localDetail.transfer_date
+                    ? new Date(localDetail.transfer_date).toLocaleString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
@@ -103,25 +106,25 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
                   <Typography fontSize={13} color="text.secondary">
                     From
                   </Typography>
-                  <Typography fontWeight={600}>{show(data.from_location_name)}</Typography>
+                  <Typography fontWeight={600}>{show(localDetail.from_location_name)}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography fontSize={13} color="text.secondary">
                     To
                   </Typography>
-                  <Typography fontWeight={600}>{show(data.to_location_name)}</Typography>
+                  <Typography fontWeight={600}>{show(localDetail.to_location_name)}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography fontSize={13} color="text.secondary">
                     Reason
                   </Typography>
-                  <Typography>{show(data.transfer_reason)}</Typography>
+                  <Typography>{show(localDetail.transfer_reason)}</Typography>
                 </Grid>
                 <Grid item xs={6}>
                   <Typography fontSize={13} color="text.secondary">
                     Notes
                   </Typography>
-                  <Typography>{show(data.notes)}</Typography>
+                  <Typography>{show(localDetail.notes)}</Typography>
                 </Grid>
               </Grid>
 
@@ -158,13 +161,21 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
 
             {/* RIGHT PANE: USERS */}
             <Stack spacing={3} flex={1} minWidth={220}>
-              <ProfileRow label="Transferred By" name={data.transferred_by_name} profileUrl={getProfileUrl(data.transferred_by_profile)} />
-              <ProfileRow label="Assigned To" name={data.assigned_to_name} profileUrl={getProfileUrl(data.assigned_to_profile)} />
+              <ProfileRow
+                label="Transferred By"
+                name={localDetail.transferred_by_name}
+                profileUrl={getProfileUrl(localDetail.transferred_by_profile)}
+              />
+              <ProfileRow
+                label="Assigned To"
+                name={localDetail.assigned_to_name}
+                profileUrl={getProfileUrl(localDetail.assigned_to_profile)}
+              />
               <ProfileRow
                 label="Received By"
-                name={data.received_by_name || 'Not Received'}
-                profileUrl={getProfileUrl(data.received_by_profile)}
-                muted={!data.received_by_name}
+                name={localDetail.received_by_name || 'Not Received'}
+                profileUrl={getProfileUrl(localDetail.received_by_profile)}
+                muted={!localDetail.received_by_name}
               />
             </Stack>
           </Stack>
@@ -176,9 +187,7 @@ export default function StockTransferOverview({ data, grandTotal, onStatusChange
         open={openModal}
         handleClose={() => setOpenModal(false)}
         transfer={data}
-        actionDone={() => {
-          if (typeof onStatusChange === 'function') onStatusChange();
-        }}
+        onActionDone={onFetch}
       />
     </>
   );

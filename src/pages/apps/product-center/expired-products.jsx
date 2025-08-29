@@ -58,7 +58,7 @@ const priorityIcons = {
 };
 export default function ExpiredProductsPage() {
   const [search, setSearch] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'expires_at', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'expiry_date', direction: 'asc' });
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [expiryFilter, setExpiryFilter] = useState('all');
@@ -110,7 +110,7 @@ export default function ExpiredProductsPage() {
     const totalUnitsAffected = filtered.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
     const totalValueAffected = filtered.reduce((sum, p) => sum + (Number(p.quantity) || 0) * (Number(p.unit_price) || 0), 0);
     const oldestProduct = filtered.reduce(
-      (prev, curr) => (new Date(curr.expires_at) < new Date(prev.expires_at) ? curr : prev),
+      (prev, curr) => (new Date(curr.expiry_date) < new Date(prev.expiry_date) ? curr : prev),
       filtered[0]
     );
     return { totalItems, totalUnitsAffected, totalValueAffected, oldestProduct };
@@ -131,7 +131,7 @@ export default function ExpiredProductsPage() {
     sortedData.sort((a, b) => {
       const aVal = a[sortConfig.key] ?? '';
       const bVal = b[sortConfig.key] ?? '';
-      if (sortConfig.key === 'expires_at') {
+      if (sortConfig.key === 'expiry_date') {
         return sortConfig.direction === 'asc' ? new Date(aVal) - new Date(bVal) : new Date(bVal) - new Date(aVal);
       }
       if (typeof aVal === 'number' && typeof bVal === 'number') {
@@ -153,7 +153,7 @@ export default function ExpiredProductsPage() {
     { label: 'Quantity', key: 'quantity' },
     { label: 'Location', key: 'location_name' },
     { label: 'Business Unit', key: 'business_unit_name' },
-    { label: 'Expired Date', key: 'expires_at' },
+    { label: 'Expired Date', key: 'expiry_date' },
     { label: 'Expiry Type', key: 'expiry_type' },
     { label: 'Days Left', key: 'days_to_expiry' },
     { label: 'Inventory Value', key: 'inventory_value' }
@@ -211,7 +211,7 @@ export default function ExpiredProductsPage() {
             <CSVExport
               data={sorted.map((p) => ({
                 ...p,
-                expires_at: formatDate(p.expires_at)
+                expiry_date: formatDate(p.expiry_date)
               }))}
               headers={csvHeaders}
               filename="products-expiry.csv"
@@ -278,7 +278,7 @@ export default function ExpiredProductsPage() {
                   { label: '6 months', value: '6m' },
                   { label: '1 year', value: '1y' },
                   { label: '2 years', value: '2y' },
-                  { label: '5 years', value: '5y' },
+                  { label: '5 years', value: '5y' }
                 ]}
                 getOptionLabel={(o) => o.label}
                 value={[
@@ -386,7 +386,7 @@ export default function ExpiredProductsPage() {
                     <TableCell>
                       <Chip
                         variant="outlined"
-                        label={formatDate(p.expires_at)}
+                        label={formatDate(p.expiry_date)}
                         color={p.expiry_type === 'expired' ? 'error' : 'warning'}
                         size="small"
                       />

@@ -28,8 +28,8 @@ export async function payCredits(credit_id, amount) {
 
   return data;
 }
-export async function deleteCredit(adjustmentId) {
-  const { data } = await axios.delete(`/credit/${adjustmentId}`);
+export async function deleteCreditPayment(payment_id) {
+  const { data } = await axios.delete(`/credit/payment/${payment_id}`);
 
   return data;
 }

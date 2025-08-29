@@ -53,9 +53,12 @@ export default function StockTransferForm() {
 
   const { BusinessUnits } = useGetBusinessUnit();
   const { locations } = useGetLocation();
-  const { products } = useGetProducts();
+  const { products, refetch } = useGetProducts();
   const { user: localUser } = useAuth();
 
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   // Query for receiver user (auto from selected BU/Location)
   const {
     userInfo: receiverUser,

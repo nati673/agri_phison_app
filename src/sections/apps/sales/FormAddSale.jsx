@@ -257,7 +257,7 @@ export default function SalesEditForm({ sale, closeModal, actionDone }) {
 
   const handleRemove = (idx) => setEntries(entries.filter((_, i) => i !== idx));
 
-  const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0 && Number(entry.price) > 0);
+  const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0);
 
   // Totals: for display panel always use the rendered values (follow original sale data for existing, preview/batch data for new)
   const displayTotals = entries.reduce(

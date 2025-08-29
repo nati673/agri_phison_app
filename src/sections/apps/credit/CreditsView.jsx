@@ -1,10 +1,13 @@
-import React from 'react';
-import { Box, Chip, Divider, Grid, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableRow } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Chip, Divider, Grid, Stack, Typography, Table, TableBody, TableCell, TableContainer, TableRow, Button } from '@mui/material';
 import { format, formatDistanceToNow } from 'date-fns';
+import AlertCreditPaymentDelete from './AlertCreditPaymentDelete';
+import { Trash } from 'iconsax-react';
 
-export default function CreditsView({ data }) {
+export default function CreditsView({ data, onPaymentSuccess }) {
   if (!data) return null;
-
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   return (
     <Box sx={{ p: { xs: 2, sm: 4 }, mb: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 1 }}>
       <Typography variant="h5" fontWeight={700} mb={2}>
@@ -94,6 +97,20 @@ export default function CreditsView({ data }) {
                     Amount: Birr{' '}
                     {payment.payment_amount ? Number(payment.payment_amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<Trash />}
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
@@ -106,6 +123,16 @@ export default function CreditsView({ data }) {
           </TableBody>
         </Table>
       </TableContainer>
+      <AlertCreditPaymentDelete
+        payment_id={selectedPayment?.payment_id || 0}
+        amount={selectedPayment?.payment_amount || ''}
+        open={deleteDialogOpen}
+        handleClose={() => {
+          setDeleteDialogOpen(false);
+          setSelectedPayment(null);
+        }}
+        onPaymentSuccess={onPaymentSuccess}
+      />
     </Box>
   );
 }

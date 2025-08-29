@@ -129,7 +129,7 @@ export default function LowStockProducts() {
     { label: 'Min Quantity', key: 'minQty' },
     { label: 'Below By (Units)', key: 'below_by' },
     { label: 'Below By (%)', key: 'below_pct' },
-    { label: 'Unit Price', key: 'unit_price' },
+    { label: 'Unit Price )(', key: 'unit_price' },
     { label: 'Location', key: 'location_name' },
     { label: 'Business Unit', key: 'business_unit_name' },
     { label: 'Expires At', key: 'expires_at' }
@@ -174,7 +174,7 @@ export default function LowStockProducts() {
             <RoundIconCard
               primary="Shortage Value"
               secondary={`Birr ${kpis.totalBelowValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-              content="Value of shortage"
+              content="Value of shortage (AVG unit price)"
               iconPrimary={ValueIcon}
               color="secondary.darker"
               bgcolor="secondary.lighter"
@@ -286,7 +286,7 @@ export default function LowStockProducts() {
                     { key: 'minQty', label: 'Min Qty', align: 'right' },
                     { key: 'below_by', label: 'Below By', align: 'right' },
                     { key: 'below_pct', label: 'Below %', align: 'right' },
-                    { key: 'unit_price', label: 'Unit Price', align: 'right' },
+                    { key: 'unit_price', label: 'Unit Price (AVG)', align: 'right' },
                     { key: 'location_name', label: 'Location' },
                     { key: 'business_unit_name', label: 'Business Unit' },
                     { key: 'expires_at', label: 'Expires' }

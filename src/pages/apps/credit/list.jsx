@@ -21,7 +21,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import MainCard from 'components/MainCard';
 import ScrollX from 'components/ScrollX';
 import IconButton from 'components/@extended/IconButton';
-import { HeaderSort, IndeterminateCheckbox, RowSelection, TablePagination } from 'components/third-party/react-table';
+import { HeaderSort, RowSelection, TablePagination } from 'components/third-party/react-table';
 import { ArrowDown2, ArrowUp2, Edit, Filter, MoneyAdd, ProfileCircle, SearchNormal1, Setting2, Trash } from 'iconsax-react';
 
 import TableFilters from 'components/TableFilters';
@@ -31,12 +31,8 @@ import { useGetBusinessUnit } from 'api/business_unit';
 import { useGetLocation } from 'api/location';
 
 import { filterCredit } from 'api/credit';
-import EmptySales from 'sections/apps/sales/EmptySales'; // reuse existing empty state
-// import CreditsOverview from 'sections/apps/credits/CreditsOverview'; // you will implement like SalesOverview
-import CreditsView from 'sections/apps/credit/CreditsView'; // detail expanded row
-// import CreditsModal from 'sections/apps/credits/CreditsModal'; // for editing/updating
-// import AlertCreditDelete from 'sections/apps/credits/AlertCreditDelete';
-// import CreditStatusModal from 'sections/apps/credits/CreditStatusModal';
+import EmptySales from 'sections/apps/credit/EmptyCredit';
+import CreditsView from 'sections/apps/credit/CreditsView';
 
 import {
   flexRender,
@@ -69,7 +65,7 @@ const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' && pr
 }));
 
 // ------------------- TABLE -------------------
-function ReactTable({ data, columns }) {
+function ReactTable({ data, columns, setActionDone }) {
   const theme = useTheme();
   const safeData = safeArray(data);
   const [sorting, setSorting] = useState([{ id: 'added_date', desc: true }]);
@@ -126,7 +122,7 @@ function ReactTable({ data, columns }) {
                   {row.getIsExpanded() && (
                     <TableRow sx={{ '&:hover': { bgcolor: `${backColor} !important` } }}>
                       <TableCell colSpan={row.getVisibleCells().length}>
-                        <CreditsView data={row.original} />
+                        <CreditsView data={row.original} onPaymentSuccess={() => setActionDone((ad) => !ad)} />
                       </TableCell>
                     </TableRow>
                   )}
@@ -159,12 +155,6 @@ export default function CreditsListPage() {
   const initialCredits = useLoaderData();
   const [credits, setCredits] = useState(safeArray(initialCredits));
 
-  const [openDelete, setOpenDelete] = useState(false);
-  const [isCreditModalOpen, setCreditModalOpen] = useState(false);
-  const [selectedCredit, setSelectedCredit] = useState(null);
-  const [creditDeleteId, setCreditDeleteId] = useState('');
-  const [isStatusModalOpen, setStatusModalOpen] = useState(false);
-  const [selectedStatusCredit, setSelectedStatusCredit] = useState(null);
   const [actionDone, setActionDone] = useState(false);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [creditToPay, setCreditToPay] = useState(null);
@@ -267,18 +257,7 @@ export default function CreditsListPage() {
             <Tooltip title="View More">
               <IconButton onClick={() => row.toggleExpanded()}>{row.getIsExpanded() ? <ArrowUp2 /> : <ArrowDown2 />}</IconButton>
             </Tooltip>
-            <Tooltip title="Edit">
-              <IconButton
-                color="primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedCredit(row.original);
-                  setCreditModalOpen(true);
-                }}
-              >
-                <Edit />
-              </IconButton>
-            </Tooltip>
+
             <Tooltip title="Add Payment">
               <IconButton
                 color="warning"
@@ -291,19 +270,6 @@ export default function CreditsListPage() {
                 <MoneyAdd />
               </IconButton>
             </Tooltip>
-
-            <Tooltip title="Delete">
-              <IconButton
-                color="error"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDelete(true);
-                  setCreditDeleteId(row.original.credit_id);
-                }}
-              >
-                <Trash />
-              </IconButton>
-            </Tooltip>
           </Stack>
         )
       }
@@ -314,7 +280,6 @@ export default function CreditsListPage() {
   return (
     <Box>
       <Main theme={theme} open={false} container={container}>
-        {/* <CreditsOverview credits={credits} /> */}
         <MainCard content={false}>
           <TableFilters
             data={credits}
@@ -326,32 +291,9 @@ export default function CreditsListPage() {
             setActiveTab={setActiveTab}
           />
           <Divider />
-          {credits.length > 0 ? <ReactTable data={credits} columns={columns} /> : <EmptySales />}
+          {credits.length > 0 ? <ReactTable data={credits} columns={columns} setActionDone={setActionDone} /> : <EmptySales />}
         </MainCard>
 
-        {/* Modals */}
-        {/* <AlertCreditDelete
-          id={Number(creditDeleteId)}
-          company_id={user?.company_id}
-          title={creditDeleteId}
-          open={openDelete}
-          handleClose={() => setOpenDelete(false)}
-          actionDone={setActionDone}
-        />
-        <CreditStatusModal
-          open={isStatusModalOpen}
-          handleClose={() => setStatusModalOpen(false)}
-          credit={selectedStatusCredit}
-          actionDone={setActionDone}
-        />
-        
-        <CreditsModal
-          open={isCreditModalOpen}
-          actionDone={setActionDone}
-          modalToggler={setCreditModalOpen}
-          credit={selectedCredit}
-          filters={filter}
-        /> */}
         <CreditPaymentModal
           open={isPaymentModalOpen}
           handleClose={() => setPaymentModalOpen(false)}

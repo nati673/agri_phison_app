@@ -158,6 +158,19 @@ export default function StockTransferEditForm({ transfer, closeModal, actionDone
   };
 
   const handleChange = (idx, field, value) => {
+    if (transfer.transfer_status?.toLowerCase() !== 'pending') {
+      if (transfer.transfer_status === 'rejected') {
+        toast.error('If editing is required, please mark it as Pending first (only possible if no transactions are associated).');
+        toast.error('This transfer has been marked as Rejected and cannot be edited.');
+      } else if (transfer.transfer_status === 'received') {
+        toast.error('If editing is required, please mark it as Pending first (only possible if no transactions are associated).');
+        toast.error('This transfer has already been Received and cannot be edited.');
+      } else {
+        toast.error('This transfer cannot be edited.');
+      }
+      return;
+    }
+
     setEntries((prev) => prev.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry)));
     // Preview only for newly added (non-existing) rows
     if (!entries[idx]?.isExisting && (field === 'product' || field === 'quantity') && value) {

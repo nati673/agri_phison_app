@@ -1,6 +1,6 @@
 import useAuth from 'hooks/useAuth';
-import { useMemo } from 'react';
-import useSWR from 'swr';
+import { useCallback, useMemo } from 'react';
+import useSWR, { mutate } from 'swr';
 import axios, { fetcher } from 'utils/axios';
 
 export async function loader() {
@@ -38,18 +38,10 @@ export async function deleteTransfer(id, company_id) {
   return data;
 }
 
-export const updateTransferStatus = async (transfer_id, status) => {
-  const { data } = await axios.patch('/transfer/status', {
-    transfer_id,
-    status
-  });
-
-  return data;
-};
 export function useGetStockTransferDetail(accessId) {
   const { user } = useAuth();
   const companyId = user?.company_id;
-
+  const endpoint = `/transfer/detail/${accessId}`;
   if (!companyId || !accessId) {
     return {
       transferDetail: null,
@@ -59,22 +51,36 @@ export function useGetStockTransferDetail(accessId) {
       transferDetailEmpty: true
     };
   }
-  const { data, isLoading, error, isValidating } = useSWR(`/transfer/detail/${accessId}`, fetcher, {
+  const { data, isLoading, error, isValidating } = useSWR(endpoint, fetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false
   });
-
+  const refetch = useCallback(() => {
+    if (endpoint) mutate(endpoint, undefined, { revalidate: true });
+  }, [endpoint, mutate]);
   const memoizedValue = useMemo(
     () => ({
-      transferDetail: data?.data || [],
+      transferDetail: data?.data || null,
       transferDetailLoading: isLoading,
       transferDetailError: error,
       transferDetailValidating: isValidating,
-      transferDetailEmpty: !isLoading && !data?.data?.length
+      transferDetailEmpty: !isLoading && !data?.data?.length,
+      refetch
     }),
     [data, error, isLoading, isValidating]
   );
 
-  return memoizedValue;
+  return {
+    ...memoizedValue,
+    refetch
+  };
 }
+export const updateTransferStatus = async (transfer_id, status) => {
+  const { data } = await axios.patch('/transfer/status', {
+    transfer_id,
+    status
+  });
+
+  return data;
+};

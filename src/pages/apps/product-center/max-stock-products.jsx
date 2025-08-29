@@ -180,7 +180,7 @@ export default function MaxStockProducts() {
             <RoundIconCard
               primary="Overstock Value"
               secondary={`Birr ${kpis.totalOverValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-              content="Monetary value over stock"
+              content="Monetary value over stock (AVG unit price)"
               iconPrimary={ValueIcon}
               color="error.darker"
               bgcolor="error.lighter"
@@ -295,7 +295,7 @@ export default function MaxStockProducts() {
                     { key: 'maxQty', label: 'Max Qty', align: 'right' },
                     { key: 'over_by', label: 'Over By', align: 'right' },
                     { key: 'over_pct', label: 'Over %', align: 'right' },
-                    { key: 'unit_price', label: 'Unit Price', align: 'right' },
+                    { key: 'unit_price', label: 'Unit Price (AVG)', align: 'right' },
                     { key: 'location_name', label: 'Location' },
                     { key: 'business_unit_name', label: 'Business Unit' },
                     { key: 'expires_at', label: 'Expires' }

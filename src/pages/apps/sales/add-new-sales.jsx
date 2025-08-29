@@ -65,7 +65,7 @@ export default function SalesForm() {
   const { BusinessUnits } = useGetBusinessUnit();
   const { locations } = useGetLocation();
   const { customers } = useGetCustomer();
-  const { products } = useGetProducts();
+  const { products, refetch } = useGetProducts();
   const { setScanHandlerActive } = useTool();
   const [paidAmount, setPaidAmount] = useState('');
   const [paybackDate, setPaybackDate] = useState(null);
@@ -85,7 +85,9 @@ export default function SalesForm() {
   useEffect(() => {
     setScanHandlerActive(false);
   }, []);
-
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   const handleSaleInfoChange = (field, value) => {
     setSaleInfo((prev) => ({
       ...prev,
@@ -300,7 +302,7 @@ export default function SalesForm() {
     }
   };
 
-  const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0 && Number(entry.price) > 0);
+  const hasValidEntry = entries.some((entry) => entry.product && Number(entry.quantity) > 0);
   return (
     <form onSubmit={handleSubmit}>
       <MainCard sx={{ mb: 3, p: 3 }}>

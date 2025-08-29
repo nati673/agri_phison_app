@@ -16,7 +16,8 @@ export const endpoints = {
   modal: '/modal',
   create_customer: '/customer',
   update_customer: '/customer',
-  delete_customer: '/customer'
+  delete_customer: '/customer',
+  transaction: '/customer/transactions'
 };
 
 export function useGetCustomer() {
@@ -87,8 +88,6 @@ export async function updateCustomer(customerId, updatedCustomer) {
     ...updatedCustomer
   });
 
-
-
   await mutate(`${endpoints.customers}/${company_id}`);
 
   return response.data;
@@ -147,4 +146,10 @@ export function handlerCustomerDialog(modal) {
     },
     false
   );
+}
+
+export async function useGetTransaction(post_id, newCustomer) {
+  const { data } = await axios.post(`${endpoints.transaction}/${post_id}`, { business_unit_id: null, location_id: null });
+
+  return data;
 }
